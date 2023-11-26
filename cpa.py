@@ -42,17 +42,6 @@ class Measurement:
             print(f"An error occurred: {e}")
 
 
-def load_binary_file(file_path):
-    with open(file_path, 'rb') as binary_file:
-        data = binary_file.read()
-    return data
-
-
-def load_trace_length_file(file_path):
-    with open(file_path, 'r') as trace_length_file:
-        return int(trace_length_file.readline()[1:])  # skip the + character
-
-
 def main():
     unknown_key_measurement = Measurement(
         plaintext='cpa/plaintext-unknown_key.txt',
@@ -60,11 +49,10 @@ def main():
         trace='cpa/traces-unknown_key.bin'
     )
 
-    binary_data = load_binary_file(unknown_key_measurement.trace_path)
-    matrix = (np.frombuffer(binary_data, dtype=np.int8).
-              reshape(-1, unknown_key_measurement.trace_length))
+    traces_matrix = (np.fromfile(unknown_key_measurement.trace_path, dtype=np.uint8).
+                     reshape(-1, unknown_key_measurement.trace_length))
 
-    print(matrix)
+    print(traces_matrix)
 
 
 if __name__ == "__main__":
