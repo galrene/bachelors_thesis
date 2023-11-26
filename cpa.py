@@ -69,6 +69,15 @@ def build_hypothesis_matrix_for_byte(measurement: Measurement, byte_idx: int) ->
             hypothesis_matrix[i, j] = pt_col[i] ^ j
     return hypothesis_matrix
 
+def build_hamming_weight_matrix(hypothesis_matrix: np.ndarray) -> np.ndarray:
+    """
+    Build a hamming weight matrix for a hypothesis matrix.
+    """
+    hamming_weight_matrix = np.zeros(hypothesis_matrix.shape, dtype=np.uint8)
+    for i in range(hypothesis_matrix.shape[0]):
+        for j in range(hypothesis_matrix.shape[1]):
+            hamming_weight_matrix[i, j] = bin(hypothesis_matrix[i, j]).count("1")
+    return hamming_weight_matrix
 
 def main():
     unknown_key_measurement = Measurement(
@@ -80,8 +89,11 @@ def main():
     traces_matrix = (np.fromfile(unknown_key_measurement.trace_path, dtype=np.uint8).
                      reshape(-1, unknown_key_measurement.trace_length))
 
-    hypothesis_matrix = build_hypothesis_matrix_for_byte(unknown_key_measurement, 1)
+    hypothesis_matrix = build_hypothesis_matrix_for_byte(unknown_key_measurement, 0)
+    hamming_weight_matrix = build_hamming_weight_matrix(hypothesis_matrix)
+
     print(hypothesis_matrix)
+    print(hamming_weight_matrix)
 
 
 if __name__ == "__main__":
