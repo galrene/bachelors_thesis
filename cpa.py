@@ -18,6 +18,7 @@ class Measurement:
         self.ciphertext_path = ciphertext
         self.trace_path = trace
         self.trace_length = self.get_trace_length()
+        self.cnt = self.get_line_count(self.plaintext_path) # number of total measurements
 
     def get_trace_length(self) -> int:
         """
@@ -25,12 +26,19 @@ class Measurement:
         by the amount of measurements.
         """
         trace_size = self.get_file_size(self.trace_path)
-        with open(self.plaintext_path, 'r') as file:
-            pt_line_count = sum(1 for _ in file)
+        pt_line_count = self.get_line_count(self.plaintext_path)
         if trace_size % pt_line_count != 0:
             print(f"Trace size: {trace_size}\nPT line count: {pt_line_count}")
             raise ValueError("Binary data size is not a multiple of PT line count")
         return trace_size // pt_line_count
+
+    def get_line_count(self, file_path: str) -> int:
+        """
+        Returns the amount of lines in a file.
+        """
+        with open(file_path, 'r') as file:
+            line_count = sum(1 for _ in file)
+        return line_count
 
     def get_file_size(self, file_path: str) -> int:
         try:
@@ -40,6 +48,26 @@ class Measurement:
             print(f"The file '{file_path}' was not found.")
         except Exception as e:
             print(f"An error occurred: {e}")
+
+def hex_to_int(hex_str) -> int:
+    return int(hex_str, 16)
+
+def build_hypothesis_matrix_for_byte(measurement: Measurement, byte_idx: int) -> np.ndarray:
+    """
+    Build a hypothesis matrix for a single byte of the key. Using a single byte of all measured plaintexts.
+    p[i] = i-th measured plaintext
+    k[j] = j-th possible key byte
+    H[i,j] = p[i] xor k[j]
+    """
+    pt_col = np.loadtxt(measurement.plaintext_path, usecols=byte_idx,
+                        converters={0: hex_to_int}, dtype=np.uint8)
+    hypothesis_matrix = np.zeros((measurement.cnt, 256), dtype=np.uint8)
+    assert pt_col.size == measurement.cnt  # check if the pt[byte_idx] column is as long as the number of measurements
+
+    for i in range(measurement.cnt):
+        for j in range(256):
+            hypothesis_matrix[i, j] = pt_col[i] ^ j
+    return hypothesis_matrix
 
 
 def main():
@@ -52,7 +80,8 @@ def main():
     traces_matrix = (np.fromfile(unknown_key_measurement.trace_path, dtype=np.uint8).
                      reshape(-1, unknown_key_measurement.trace_length))
 
-    print(traces_matrix)
+    hypothesis_matrix = build_hypothesis_matrix_for_byte(unknown_key_measurement, 1)
+    print(hypothesis_matrix)
 
 
 if __name__ == "__main__":
