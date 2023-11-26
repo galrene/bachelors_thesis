@@ -49,7 +49,7 @@ class Measurement:
         except Exception as e:
             print(f"An error occurred: {e}")
 
-def hex_to_int(hex_str) -> int:
+def hex_to_int(hex_str: str) -> int:
     return int(hex_str, 16)
 
 def build_hypothesis_matrix_for_byte(measurement: Measurement, byte_idx: int) -> np.ndarray:
@@ -59,8 +59,8 @@ def build_hypothesis_matrix_for_byte(measurement: Measurement, byte_idx: int) ->
     k[j] = j-th possible key byte
     H[i,j] = p[i] xor k[j]
     """
-    pt_col = np.loadtxt(measurement.plaintext_path, usecols=byte_idx,
-                        converters={0: hex_to_int}, dtype=np.uint8)
+    # noinspection PyTypeChecker
+    pt_col = np.loadtxt(measurement.plaintext_path, usecols=byte_idx, converters=hex_to_int, dtype=np.uint8)
     hypothesis_matrix = np.zeros((measurement.cnt, 256), dtype=np.uint8)
     assert pt_col.size == measurement.cnt  # check if the pt[byte_idx] column is as long as the number of measurements
 
