@@ -2,6 +2,11 @@ import os
 
 import numpy as np
 
+"""
+TODO:
+- verify whether the fast cpa is correct
+- finding key is incorrect pretty sure
+"""
 
 class Measurement:
     """
@@ -79,22 +84,92 @@ def build_hamming_weight_matrix(hypothesis_matrix: np.ndarray) -> np.ndarray:
             hamming_weight_matrix[i, j] = bin(hypothesis_matrix[i, j]).count("1")
     return hamming_weight_matrix
 
+def build_correlation_matrix(hamming_weight_matrix: np.ndarray, traces_matrix: np.ndarray) -> np.ndarray:
+    """
+    Build a correlation matrix for a hamming weight matrix and a traces matrix.
+    """
+    correlation_matrix = np.zeros((hamming_weight_matrix.shape[1], traces_matrix.shape[1]), dtype=np.float64)
+    for i in range(hamming_weight_matrix.shape[1]):
+        for j in range(traces_matrix.shape[1]):
+            print(f"Calculating correlation for byte {i} and trace {j}")
+            correlation_matrix[i, j] = np.corrcoef(hamming_weight_matrix[:, i], traces_matrix[:, j])[0, 1]
+    return correlation_matrix
+
+def build_correlation_matrix_fast_dot(hamming_weight_matrix: np.ndarray, traces_matrix: np.ndarray) -> np.ndarray:
+    """
+    Build a correlation matrix for a hamming weight matrix and a traces matrix.
+    """
+    # Standardize the Hamming weight matrix and traces matrix
+    standardized_hamming = (hamming_weight_matrix - np.mean(hamming_weight_matrix, axis=0)) / np.std(hamming_weight_matrix, axis=0)
+    standardized_traces = (traces_matrix - np.mean(traces_matrix, axis=0)) / np.std(traces_matrix, axis=0)
+
+    # Calculate the correlation matrix using vectorized operations
+    correlation_matrix = np.dot(standardized_hamming.T, standardized_traces) / hamming_weight_matrix.shape[0]
+    return correlation_matrix
+
+def build_correlation_matrix_fast_corrcoef(hamming_weight_matrix: np.ndarray, traces_matrix: np.ndarray) -> np.ndarray:
+    """
+    Build a correlation matrix for a hamming weight matrix and a traces matrix.
+    """
+    # Standardize the Hamming weight matrix and traces matrix
+    standardized_hamming = (hamming_weight_matrix - np.mean(hamming_weight_matrix, axis=0)) / np.std(hamming_weight_matrix, axis=0)
+    standardized_traces = (traces_matrix - np.mean(traces_matrix, axis=0)) / np.std(traces_matrix, axis=0)
+
+    # Calculate the correlation matrix using vectorized operations
+    correlation_matrix = np.corrcoef(standardized_hamming.T, standardized_traces.T)[:256, 256:]
+
+    return correlation_matrix
+
+def determine_key (correlation_matrix: np.ndarray) -> np.ndarray:
+    """
+    Returns the key based on the maximum correlation for each byte of the key.
+    """
+    max_in_flattened = np.argmax(correlation_matrix)
+    return np.unravel_index(max_in_flattened, correlation_matrix.shape)[1]
+
+def find_key(measurement: Measurement, key_length_in_bytes ) -> np.ndarray:
+    """
+    Returns the key based on the maximum correlation for each byte of the key.
+    """
+    traces_matrix = (np.fromfile(measurement.trace_path, dtype=np.uint8).
+                     reshape(-1, measurement.trace_length))
+    key = np.ndarray(key_length_in_bytes)
+    for i in range(key_length_in_bytes):
+        print(f"Calculating key[{i}]")
+        hypothesis_matrix = build_hypothesis_matrix_for_byte(measurement, 0)
+        hamming_weight_matrix = build_hamming_weight_matrix(hypothesis_matrix)
+        correlation_matrix = build_correlation_matrix_fast_dot(hamming_weight_matrix, traces_matrix)
+        key_byte = determine_key(correlation_matrix)
+        print(f"key[{i}]: {key_byte}")
+        key[i] = key_byte
+    return key
+
 def main():
+    key_length_in_bytes = 16
+    # known_key_measurement = Measurement(
+    #     plaintext='cpa/plaintext-00112233445566778899aabbccddeeff.txt',
+    #     ciphertext='cpa/ciphertext-00112233445566778899aabbccddeeff.txt',
+    #     trace='cpa/traces-00112233445566778899aabbccddeeff.bin'
+    # )
+
     unknown_key_measurement = Measurement(
         plaintext='cpa/plaintext-unknown_key.txt',
         ciphertext='cpa/ciphertext-unknown_key.txt',
         trace='cpa/traces-unknown_key.bin'
     )
 
-    traces_matrix = (np.fromfile(unknown_key_measurement.trace_path, dtype=np.uint8).
-                     reshape(-1, unknown_key_measurement.trace_length))
-
-    hypothesis_matrix = build_hypothesis_matrix_for_byte(unknown_key_measurement, 0)
-    hamming_weight_matrix = build_hamming_weight_matrix(hypothesis_matrix)
-
-    print(hypothesis_matrix)
-    print(hamming_weight_matrix)
+    key = find_key(unknown_key_measurement, key_length_in_bytes)
+    print(f"Key: {key}")
 
 
 if __name__ == "__main__":
+
+    # matrix = np.array([[20,2,13], [4,15,6], [7,28,9]])
+    # print(matrix)
+    # print(matrix.flatten())
+    # max_index = np.argmax(matrix)
+    # print("max:\n", matrix.flatten()[max_index])
+    # max_index_2d = np.unravel_index(max_index, matrix.shape)
+    # print("max 2d:\n", max_index_2d)
+    # print("col max:\n", max_index_2d[1])
     main()
