@@ -1,11 +1,13 @@
 import os
 
 import numpy as np
-from scipy.signal import correlate2d
+import matplotlib.pylab as plt
 """
 TODO:
 - verify whether the fast cpa is correct
 - finding key is incorrect pretty sure
+- skus spravit to co robis v naivnom sposobe, ale s tym ze budes postupne vytvarat riadky
+  teda skorelujes hamming weight stlpec s kazdym stlpcom z trace matrix
 """
 
 class Measurement:
@@ -119,18 +121,48 @@ def build_correlation_matrix_corrcoef(standardized_hamming_weight_matrix: np.nda
     """
     Build a correlation matrix for a hamming weight matrix and a traces matrix.
     """
-    key_len = standardized_hamming_weight_matrix.shape[1]
+    key_byte_len = standardized_hamming_weight_matrix.shape[1]
     trace_len = standardized_traces_matrix.shape[1]
 
     # Initialize an empty correlation matrix
-    correlation_matrix = np.zeros((key_len, trace_len))
+    correlation_matrix = np.zeros((key_byte_len, trace_len))
 
     # Calculate correlations column-wise for each chunk
     for i in range(0, trace_len, chunk_size):
         end_idx = min(i + chunk_size, trace_len)
-        correlation_matrix[:, i:end_idx] = np.corrcoef(standardized_hamming_weight_matrix, standardized_traces_matrix[:, i:end_idx], rowvar=False)[:key_len, :]
+        correlation_matrix[:, i:end_idx] = np.corrcoef(standardized_hamming_weight_matrix, standardized_traces_matrix[:, i:end_idx], rowvar=False)[:key_byte_len, :]
 
     return correlation_matrix
+
+# skus spravit to co robis v naivnom sposobe, ale s tym ze budes postupne vytvarat riadky
+# teda skorelujes hamming weight stlpec s kazdym stlpcom z trace matrix
+
+
+def corr ( hamming_matrix, trace_matrix ):
+    trace_length = trace_matrix.shape[1]
+    correlation_matrix = np.zeros((256, trace_length), dtype=np.float64)
+    print(f"trace matrix shape: {trace_matrix.shape}")
+    for i in range(256):
+        print(f"hamming part shape: {hamming_matrix[::, i].shape}")
+        correlation_matrix[ i , ::] = np.corrcoef(hamming_matrix[::, i], trace_matrix, rowvar=False)
+    return correlation_matrix
+
+
+def build_correlation_matrix_corrcoef_rowwise(hamming_matrix, traces_matrix, chunk_size: int = 100):
+    """
+    Build a correlation matrix for a hamming weight matrix and a traces matrix.
+    """
+    key_byte_len = hamming_matrix.shape[1]
+    trace_len = traces_matrix.shape[1]
+    correlation_matrix = np.zeros((key_byte_len, trace_len))
+
+    # Calculate correlations row-wise for each chunk
+    for i in range(0, key_byte_len, chunk_size):
+        end_idx = min(i + chunk_size, key_byte_len)
+        correlation_matrix[i:end_idx, :] = np.corrcoef(hamming_matrix[i:end_idx, :], traces_matrix, rowvar=False)[:key_byte_len, :]
+
+    return correlation_matrix
+
 
 def determine_key(correlation_matrix: np.ndarray):
     """
@@ -156,7 +188,7 @@ def find_key(measurement: Measurement, key_length_in_bytes ) -> (np.ndarray, str
         hamming_weight_matrix = build_hamming_weight_matrix(hypothesis_matrix)
         standardized_hamming = ((hamming_weight_matrix - np.mean(hamming_weight_matrix, axis=0))
                                  / np.std(hamming_weight_matrix, axis=0))
-        correlation_matrix = build_correlation_matrix_corrcoef(standardized_hamming, standardized_traces)
+        correlation_matrix = corr(standardized_hamming, standardized_traces)
         key_byte = determine_key(correlation_matrix)
         print(f"key[{i}]: {hex(key_byte)}")
         key[i] = key_byte
