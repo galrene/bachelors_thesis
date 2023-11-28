@@ -100,38 +100,36 @@ def build_correlation_matrix_fast_dot(standardized_hamming_weight_matrix: np.nda
     Build a correlation matrix for a hamming weight matrix and a traces matrix.
     Dot je maticove nasobenie.
     """
-    # Calculate the correlation matrix using vectorized operations
     correlation_matrix = (np.dot(standardized_hamming_weight_matrix.T, standardized_traces_matrix)
                           / standardized_hamming_weight_matrix.shape[0])
     return correlation_matrix
 
-def build_correlation_matrix_correlate2d(standardized_hamming_weight_matrix: np.ndarray, standardized_traces_matrix: np.ndarray) -> np.ndarray:
-    """
-    Build a correlation matrix for a hamming weight matrix and a traces matrix.
-    Correlate2d je cross-correlation.
-    """
-    # Calculate the correlation matrix using vectorized operations
-    correlation_matrix = correlate2d(standardized_hamming_weight_matrix, standardized_traces_matrix, mode='valid')
-    return correlation_matrix
-
-def build_correlation_matrix_corrcoef(standardized_hamming_weight_matrix: np.ndarray, standardized_traces_matrix: np.ndarray) -> np.ndarray:
+def build_correlation_matrix_corrcoef_memissue(standardized_hamming_weight_matrix: np.ndarray, standardized_traces_matrix: np.ndarray) -> np.ndarray:
     """
     Build a correlation matrix for a hamming weight matrix and a traces matrix.
     """
-    # Calculate the correlation matrix using vectorized operations
-    print(standardized_hamming_weight_matrix.shape)
-    print(standardized_traces_matrix.shape)
-    correlation_matrix = np.corrcoef(standardized_hamming_weight_matrix, standardized_traces_matrix)
+    # c_mtx = 256 x trace_length
+    correlation_matrix = np.zeros((standardized_hamming_weight_matrix.shape[1], standardized_traces_matrix.shape[1]), dtype=np.float64)
+    print("standardized_hamming_weight_matrix.shape: ", standardized_hamming_weight_matrix.shape)
+    print("standardized_traces_matrix.shape: ", standardized_traces_matrix.shape)
+    correlation_matrix = np.corrcoef(standardized_hamming_weight_matrix, standardized_traces_matrix, rowvar=False)[:256, ::]
     return correlation_matrix
 
+def build_correlation_matrix_corrcoef(standardized_hamming_weight_matrix: np.ndarray, standardized_traces_matrix: np.ndarray, chunk_size: int = 100) -> np.ndarray:
+    """
+    Build a correlation matrix for a hamming weight matrix and a traces matrix.
+    """
+    key_len = standardized_hamming_weight_matrix.shape[1]
+    trace_len = standardized_traces_matrix.shape[1]
 
+    # Initialize an empty correlation matrix
+    correlation_matrix = np.zeros((key_len, trace_len))
 
-def build_correlation_matrix_corrcoef_bychunks(hamming_matrix: np.ndarray, traces_matrix: np.ndarray, chunk_size: int = 100) -> np.ndarray:
-    correlation_matrix = np.zeros((hamming_matrix.shape[1], traces_matrix.shape[0]))
     # Calculate correlations column-wise for each chunk
-    for i in range(0, traces_matrix.shape[0], chunk_size):
-        end_idx = min(i + chunk_size, traces_matrix.shape[0])
-        correlation_matrix[:, i:end_idx] = np.corrcoef(hamming_matrix, traces_matrix[:, i:end_idx], rowvar=False)[:hamming_matrix.shape[1], hamming_matrix.shape[1]:]
+    for i in range(0, trace_len, chunk_size):
+        end_idx = min(i + chunk_size, trace_len)
+        correlation_matrix[:, i:end_idx] = np.corrcoef(standardized_hamming_weight_matrix, standardized_traces_matrix[:, i:end_idx], rowvar=False)[:key_len, :]
+
     return correlation_matrix
 
 def determine_key(correlation_matrix: np.ndarray):
@@ -158,7 +156,7 @@ def find_key(measurement: Measurement, key_length_in_bytes ) -> (np.ndarray, str
         hamming_weight_matrix = build_hamming_weight_matrix(hypothesis_matrix)
         standardized_hamming = ((hamming_weight_matrix - np.mean(hamming_weight_matrix, axis=0))
                                  / np.std(hamming_weight_matrix, axis=0))
-        correlation_matrix = build_correlation_matrix_corrcoef_bychunks(standardized_hamming, standardized_traces)
+        correlation_matrix = build_correlation_matrix_corrcoef(standardized_hamming, standardized_traces)
         key_byte = determine_key(correlation_matrix)
         print(f"key[{i}]: {hex(key_byte)}")
         key[i] = key_byte
