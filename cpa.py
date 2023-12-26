@@ -102,11 +102,21 @@ def hamming(hypothesis_matrix: np.ndarray) -> np.ndarray:
 
 def correlate(hamming_mtx: np.ndarray, std_traces_mtx: np.ndarray) -> np.ndarray:
     """
-    Build a correlation matrix from a hamming weight matrix and a standardized traces matrix.
+    Build a correlation matrix from a hamming weight matrix (a,b) and a standardized traces matrix.
+    
+    Sizes:
+    Hamming     : ( measurement_cnt, 256 )
+    Traces      : ( measurement_cnt, trace_len )
+    Correlation : ( 256, trace_len )
+
+    Note:
+    Standardization partially calculates the correlation matrix ( subtracts the mean and divides by the standard deviation ),
+    so speeds up the calculation.
+    The second matrix is the traces matrix, which is going to be reused for all key bytes, therefore it is standardized beforehand.
     """
     hamming = ((hamming_mtx - np.mean(hamming_mtx, axis=0)) # standardize hamming matrix
                             / np.std(hamming_mtx, axis=0))
-    correlation_matrix = ( hamming.T @ std_traces_mtx ) / hamming.shape[0]
+    correlation_matrix = ( hamming.T @ std_traces_mtx ) / hamming.shape[0] # complete the correlation calculation
     return correlation_matrix
 
 
@@ -116,13 +126,13 @@ def determine_key(correlation_matrix: np.ndarray):
     """
     max_in_flattened = np.argmax(correlation_matrix)
     max_indices = np.unravel_index(max_in_flattened, correlation_matrix.shape)
-    # max_indices[0] is the row index, which is the key byte
-    return max_indices[0]
+    return max_indices[0] # max_indices[0] is the row index, which is the key byte
 
 def find_key(measurement: Measurement, key_length_in_bytes ) -> (np.ndarray, str):
     """
     Returns the key based on the maximum correlation for each byte of the key.
     """
+    print(f"\nNumber of measurements: {measurement.cnt}")
     traces_matrix = (np.fromfile(measurement.trace_path, dtype=np.uint8).
                      reshape(-1, measurement.trace_length))
     standardized_traces = ((traces_matrix - np.mean(traces_matrix, axis=0))
