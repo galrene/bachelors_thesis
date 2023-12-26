@@ -10,7 +10,6 @@ class Measurement:
     Class encapsulating an oscilloscope measurement, it's corresponding plaintext and ciphertext
     for a power analysis attack.
     """
-
     def __init__(self, plaintext: str, ciphertext: str, trace: str):
         if (not os.path.isfile(plaintext)
                 or not os.path.isfile(ciphertext)
@@ -101,20 +100,14 @@ def hamming(hypothesis_matrix: np.ndarray) -> np.ndarray:
             hamming_weight_matrix[i, j] = bin(hypothesis_matrix[i, j]).count("1")
     return hamming_weight_matrix
 
-def correlate(x, y):
+def correlate(hamming_mtx: np.ndarray, std_traces_mtx: np.ndarray) -> np.ndarray:
     """
-    Correlate all columns from matrix x of shape (a,b)
-    with all columns from matrix y of shape (a,c),
-    creating correlation matrix C of shape (b,c).
-
-    Originally matlab script by Jiri Bucek in NI-HWB.
+    Build a correlation matrix from a hamming weight matrix and a standardized traces matrix.
     """
-    x = x - np.average(x, 0)  # remove vertical averages
-    y = y - np.average(y, 0)  # remove vertical averages
-    C = x.T @ y  # (n-1) Cov(x,y)
-    C = C / (np.sum(x ** 2, 0) ** (1 / 2))[:, np.newaxis]  # divide by (n-1) Var(x)
-    C = C / (np.sum(y ** 2, 0) ** (1 / 2))  # divide by (n-1) Var(y)
-    return C
+    hamming = ((hamming_mtx - np.mean(hamming_mtx, axis=0)) # standardize hamming matrix
+                            / np.std(hamming_mtx, axis=0))
+    correlation_matrix = ( hamming.T @ std_traces_mtx ) / hamming.shape[0]
+    return correlation_matrix
 
 
 def determine_key(correlation_matrix: np.ndarray):
@@ -132,17 +125,13 @@ def find_key(measurement: Measurement, key_length_in_bytes ) -> (np.ndarray, str
     """
     traces_matrix = (np.fromfile(measurement.trace_path, dtype=np.uint8).
                      reshape(-1, measurement.trace_length))
-    # standardized_traces = ((traces_matrix - np.mean(traces_matrix, axis=0))
-    #                        / np.std(traces_matrix, axis=0))
+    standardized_traces = ((traces_matrix - np.mean(traces_matrix, axis=0))
+                           / np.std(traces_matrix, axis=0))
     key = np.zeros(key_length_in_bytes, dtype=np.uint16)
     for i in range(key_length_in_bytes):
         print(f"Calculating key[{i}]")
-        hypothesis_matrix = hypothesis(measurement, i)
-        hamming_weight_matrix = hamming(hypothesis_matrix)
-        # standardized_hamming = ((hamming_weight_matrix - np.mean(hamming_weight_matrix, axis=0))
-        #                          / np.std(hamming_weight_matrix, axis=0))
-        # correlation_matrix = correlate(standardized_hamming, standardized_traces)
-        correlation_matrix = correlate(hamming_weight_matrix, traces_matrix)
+        hamming_weight_matrix = hamming(hypothesis(measurement, i))
+        correlation_matrix = correlate(hamming_weight_matrix, standardized_traces)
         key_byte = determine_key(correlation_matrix)
         print(f"key[{i}]: {hex(key_byte)}")
         key[i] = key_byte
@@ -150,7 +139,6 @@ def find_key(measurement: Measurement, key_length_in_bytes ) -> (np.ndarray, str
     return key, key_hex
 
 def main():
-    key_length_in_bytes = 16
     known_key_measurement = Measurement(
         plaintext='cpa/plaintext-00112233445566778899aabbccddeeff.txt',
         ciphertext='cpa/ciphertext-00112233445566778899aabbccddeeff.txt',
@@ -163,19 +151,11 @@ def main():
         trace='cpa/traces-unknown_key.bin'
     )
     start_time = time()
-    key, key_hex = find_key(known_key_measurement, key_length_in_bytes)
+    key, key_hex = find_key(known_key_measurement, key_length_in_bytes = 16)
     end_time = time()
     print(f"Key: {key_hex}")
     print(f"CPA took: {end_time - start_time:0.0f} seconds")
 
 
 if __name__ == "__main__":
-    # matrix = np.array([[20,2,13], [4,15,6], [7,28,9]])
-    # print(matrix)
-    # print(matrix.flatten())
-    # max_index = np.argmax(matrix)
-    # print("max:\n", matrix.flatten()[max_index])
-    # max_index_2d = np.unravel_index(max_index, matrix.shape)
-    # print("max 2d:\n", max_index_2d)
-    # print("col max:\n", max_index_2d[1])
     main()
