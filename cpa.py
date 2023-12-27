@@ -1,9 +1,7 @@
 import os
 import numpy as np
 from time import time
-"""
-TODO:
-"""
+from Crypto.Cipher import AES
 
 class Measurement:
     """
@@ -137,16 +135,28 @@ def find_key(measurement: Measurement, key_length_in_bytes ) -> (np.ndarray, str
                      reshape(-1, measurement.trace_length))
     standardized_traces = ((traces_matrix - np.mean(traces_matrix, axis=0))
                            / np.std(traces_matrix, axis=0))
-    key = np.zeros(key_length_in_bytes, dtype=np.uint16)
+    key = np.zeros(key_length_in_bytes, dtype=np.uint8)
     for i in range(key_length_in_bytes):
         print(f"Calculating key[{i}]")
         hamming_weight_matrix = hamming(hypothesis(measurement, i))
         correlation_matrix = correlate(hamming_weight_matrix, standardized_traces)
         key_byte = determine_key(correlation_matrix)
-        print(f"key[{i}]: {hex(key_byte)}")
+        print(f"key[{i}]: 0x{key_byte:02X}")
         key[i] = key_byte
     key_hex = ''.join([hex(i)[2:] for i in key])
     return key, key_hex
+
+def verify_key ( measurement: Measurement, key: np.ndarray ) -> bool:
+    key_bytes = bytes(key)
+    pt = np.loadtxt(measurement.plaintext_path, converters=hex_to_int, dtype=np.uint8)
+    ct = np.loadtxt(measurement.ciphertext_path, converters=hex_to_int, dtype=np.uint8)
+    pt_bytes = bytes(pt)
+    ct_bytes = bytes(ct)
+
+    cipher = AES.new(key_bytes, AES.MODE_ECB)
+    ciphertext = cipher.encrypt(pt_bytes)
+    
+    return ciphertext == ct_bytes
 
 def main():
     known_key_measurement = Measurement(
@@ -161,10 +171,12 @@ def main():
         trace='cpa/traces-unknown_key.bin'
     )
     start_time = time()
-    key, key_hex = find_key(known_key_measurement, key_length_in_bytes = 16)
+    key_arr, key_hex = find_key(known_key_measurement, key_length_in_bytes = 16)
     end_time = time()
     print(f"Key: {key_hex}")
+
     print(f"CPA took: {end_time - start_time:0.0f} seconds")
+    print(f"Ciphertext verification matches: {verify_key(known_key_measurement, key_arr)}")
 
 
 if __name__ == "__main__":
