@@ -133,9 +133,10 @@ def main():
         trace='cpa_srcs/traces-unknown_key.bin'
     )
     
-    key_arr, key_hex = find_key(known_key_measurement, key_length_in_bytes = 16, timer=True)
+    key_arr, key_hex = find_key(unknown_key_measurement, key_length_in_bytes = 16, timer=True)
+    print("====================================")
     print(f"Key: {key_hex}")
-    print(f"Ciphertext matches: {verify_key(known_key_measurement, key_arr)}")
+    print(f"Ciphertext matches: {verify_key(unknown_key_measurement, key_arr)}")
 
 
 if __name__ == "__main__":
