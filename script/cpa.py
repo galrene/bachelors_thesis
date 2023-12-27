@@ -31,7 +31,7 @@ def hypothesis(measurement: Measurement, byte_idx: int) -> np.ndarray:
     Build a hypothesis matrix for a single byte of the key. Using a single byte of all measured plaintexts.
     p[i] = i-th measured plaintext
     k[j] = j-th possible key byte
-    H[i,j] = p[i] xor k[j]
+    H[i,j] = sbpx[ p[i] xor k[j] ]
     """
     # noinspection PyTypeChecker
     pt_col = np.loadtxt(measurement.plaintext_path, usecols=byte_idx, converters=hex_to_int, dtype=np.uint8)
