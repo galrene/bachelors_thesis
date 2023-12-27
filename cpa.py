@@ -118,31 +118,38 @@ def correlate(hamming_mtx: np.ndarray, std_traces_mtx: np.ndarray) -> np.ndarray
     return correlation_matrix
 
 
-def determine_key(correlation_matrix: np.ndarray):
-    """
-    Return the key based on the maximum correlation for each byte of the key.
-    """
+def find_max(correlation_matrix: np.ndarray):
     max_in_flattened = np.argmax(correlation_matrix)
     max_indices = np.unravel_index(max_in_flattened, correlation_matrix.shape)
-    return max_indices[0] # max_indices[0] is the row index, which is the key byte
+    return max_indices
 
-def find_key(measurement: Measurement, key_length_in_bytes ) -> (np.ndarray, str):
+def find_key(measurement: Measurement, key_length_in_bytes, timer: bool = False ) -> (np.ndarray, str):
     """
     Return the key based on the maximum correlation for each byte of the key.
     """
-    print(f"\nNumber of measurements: {measurement.cnt}")
-    traces_matrix = (np.fromfile(measurement.trace_path, dtype=np.uint8).
+    print(f"\nPerforming CPA using {measurement.cnt} measurements.")
+    
+    if timer == True:
+        start_time = time()
+    
+    traces_matrix = (np.fromfile(measurement.trace_path, dtype=np.uint8). # load traces
                      reshape(-1, measurement.trace_length))
-    standardized_traces = ((traces_matrix - np.mean(traces_matrix, axis=0))
+    standardized_traces = ((traces_matrix - np.mean(traces_matrix, axis=0)) # standardize traces to save time
                            / np.std(traces_matrix, axis=0))
+    
     key = np.zeros(key_length_in_bytes, dtype=np.uint8)
     for i in range(key_length_in_bytes):
         print(f"Calculating key[{i}]")
         hamming_weight_matrix = hamming(hypothesis(measurement, i))
         correlation_matrix = correlate(hamming_weight_matrix, standardized_traces)
-        key_byte = determine_key(correlation_matrix)
+        key_byte, _ = find_max(correlation_matrix) # returns key byte and time of the leakage
         print(f"key[{i}]: 0x{key_byte:02X}")
         key[i] = key_byte
+    
+    if timer == True:
+        end_time = time()
+        print(f"CPA took: {end_time - start_time:0.0f} seconds")
+
     key_hex = ''.join([hex(i)[2:] for i in key])
     return key, key_hex
 
@@ -170,13 +177,10 @@ def main():
         ciphertext='cpa/ciphertext-unknown_key.txt',
         trace='cpa/traces-unknown_key.bin'
     )
-    start_time = time()
-    key_arr, key_hex = find_key(known_key_measurement, key_length_in_bytes = 16)
-    end_time = time()
+    
+    key_arr, key_hex = find_key(known_key_measurement, key_length_in_bytes = 16, timer=True)
     print(f"Key: {key_hex}")
-
-    print(f"CPA took: {end_time - start_time:0.0f} seconds")
-    print(f"Ciphertext verification matches: {verify_key(known_key_measurement, key_arr)}")
+    print(f"Ciphertext matches: {verify_key(known_key_measurement, key_arr)}")
 
 
 if __name__ == "__main__":
