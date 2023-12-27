@@ -120,7 +120,7 @@ def correlate(hamming_mtx: np.ndarray, std_traces_mtx: np.ndarray) -> np.ndarray
 
 def determine_key(correlation_matrix: np.ndarray):
     """
-    Returns the key based on the maximum correlation for each byte of the key.
+    Return the key based on the maximum correlation for each byte of the key.
     """
     max_in_flattened = np.argmax(correlation_matrix)
     max_indices = np.unravel_index(max_in_flattened, correlation_matrix.shape)
@@ -128,7 +128,7 @@ def determine_key(correlation_matrix: np.ndarray):
 
 def find_key(measurement: Measurement, key_length_in_bytes ) -> (np.ndarray, str):
     """
-    Returns the key based on the maximum correlation for each byte of the key.
+    Return the key based on the maximum correlation for each byte of the key.
     """
     print(f"\nNumber of measurements: {measurement.cnt}")
     traces_matrix = (np.fromfile(measurement.trace_path, dtype=np.uint8).
