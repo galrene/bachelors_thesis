@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenRun Id="synth_1" LaunchPart="xc7a35tcpg236-1" LaunchTime="1709132252">
+  <File Type="VDS-TIMING-PB" Name="system_top_timing_summary_synth.pb"/>
+  <File Type="VDS-TIMINGSUMMARY" Name="system_top_timing_summary_synth.rpt"/>
+  <File Type="RDS-DCP" Name="system_top.dcp"/>
+  <File Type="REPORTS-TCL" Name="system_top_reports.tcl"/>
+  <File Type="PA-TCL" Name="system_top.tcl"/>
+  <File Type="RDS-RDS" Name="system_top.vds"/>
+  <File Type="RDS-PROPCONSTRS" Name="system_top_drc_synth.rpt"/>
+  <File Type="RDS-UTIL" Name="system_top_utilization_synth.rpt"/>
+  <File Type="RDS-UTIL-PB" Name="system_top_utilization_synth.pb"/>
+  <FileSet Name="sources" Type="DesignSrcs" RelSrcDir="$PSRCDIR/sources_1">
+    <Filter Type="Srcs"/>
+    <File Path="$PSRCDIR/sources_1/ip/fifo_generator_0/fifo_generator_0.xci">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/ip/fifo_generator_0/fifo_generator_0.xci"/>
+        <Attr Name="ImportTime" Val="1673426672"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="implementation"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/ip/reset_gen/reset_gen.xci">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/ip/reset_gen/reset_gen.xci"/>
+        <Attr Name="ImportTime" Val="1673426672"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="implementation"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/AES_Comp.v">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/AES_Comp.v"/>
+        <Attr Name="ImportTime" Val="1673426672"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="implementation"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/uart/rxuartlite.v">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/uart/rxuartlite.v"/>
+        <Attr Name="ImportTime" Val="1673426672"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="implementation"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/uart/txuartlite.v">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/uart/txuartlite.v"/>
+        <Attr Name="ImportTime" Val="1673426672"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="implementation"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/packages/design_package.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/packages/design_package.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/general/BRAM_dual_clock.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/general/BRAM_dual_clock.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/general/FSM_FIFO.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/general/FSM_FIFO.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/uart/UART.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/uart/UART.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/io_controller/address_dec.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/io_controller/address_dec.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/io_controller/config_registers.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/io_controller/config_registers.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/general/counter_up.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/general/counter_up.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/io_controller/data_dec.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/io_controller/data_dec.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/io_controller/data_enc.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/io_controller/data_enc.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/io_controller/io_controller_fifo_aes.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/io_controller/io_controller_fifo_aes.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/io_controller/io_fsm_fifo_aes.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/io_controller/io_fsm_fifo_aes.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/io_wrapper.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/io_wrapper.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/read_traces.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/read_traces.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/reset_wrapper.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/reset_wrapper.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/sensor/sensor.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/sensor/sensor.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/sensor/sensor_top.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/sensor/sensor_top.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/sig_delay.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/sig_delay.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/xadc.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/xadc.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/system_top_artix7_fifo_aes.vhd">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/system_top_artix7_fifo_aes.vhd"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/general/n_plus_k_div_ROM.coe">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/general/n_plus_k_div_ROM.coe"/>
+        <Attr Name="ImportTime" Val="1673426672"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/general/n_plus_k_ROM.coe">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/general/n_plus_k_ROM.coe"/>
+        <Attr Name="ImportTime" Val="1673426672"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/general/n_plus_k_div_ROM_k64.coe">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/general/n_plus_k_div_ROM_k64.coe"/>
+        <Attr Name="ImportTime" Val="1673426672"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <File Path="$PSRCDIR/sources_1/imports/rtl/general/n_plus_k_ROM_k64.coe">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/rtl/general/n_plus_k_ROM_k64.coe"/>
+        <Attr Name="ImportTime" Val="1673426672"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="simulation"/>
+      </FileInfo>
+    </File>
+    <Config>
+      <Option Name="DesignMode" Val="RTL"/>
+      <Option Name="TopModule" Val="system_top"/>
+      <Option Name="TopAutoSet" Val="TRUE"/>
+    </Config>
+  </FileSet>
+  <FileSet Name="constrs_in" Type="Constrs" RelSrcDir="$PSRCDIR/constrs_1">
+    <Filter Type="Constrs"/>
+    <File Path="$PSRCDIR/constrs_1/imports/xdc/constraints_RDS.xdc">
+      <FileInfo>
+        <Attr Name="ImportPath" Val="$PPRDIR/../hw/xdc/constraints_RDS.xdc"/>
+        <Attr Name="ImportTime" Val="1673447446"/>
+        <Attr Name="UsedIn" Val="synthesis"/>
+        <Attr Name="UsedIn" Val="implementation"/>
+      </FileInfo>
+    </File>
+    <Config>
+      <Option Name="ConstrsType" Val="XDC"/>
+    </Config>
+  </FileSet>
+  <FileSet Name="utils" Type="Utils" RelSrcDir="$PSRCDIR/utils_1">
+    <Filter Type="Utils"/>
+    <Config>
+      <Option Name="TopAutoSet" Val="TRUE"/>
+    </Config>
+  </FileSet>
+  <Strategy Version="1" Minor="2">
+    <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2018">
+      <Desc>Vivado Synthesis Defaults</Desc>
+    </StratHandle>
+    <Step Id="synth_design"/>
+  </Strategy>
+  <BlockFileSet Type="BlockSrcs" Name="clock_generator"/>
+</GenRun>
