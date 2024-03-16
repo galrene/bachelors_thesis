@@ -87,8 +87,12 @@ def find_key(measurement: Measurement, key_length_in_bytes, timer: bool = False 
     if timer == True:
         start_time = time()
     
-    traces_matrix = (np.fromfile(measurement.trace_path, dtype=np.uint8). # load traces
-                     reshape(-1, measurement.trace_length))
+    # create a numpy matrix of traces from a csv file
+    traces_matrix = np.fromfile(measurement.trace_path, dtype=np.uint8, sep=",").reshape(-1, measurement.trace_length)
+    
+    # numpy matrix of traces from a binary file
+    # traces_matrix = (np.fromfile(measurement.trace_path, dtype=np.uint8). # load traces
+    #                  reshape(-1, measurement.trace_length))
     standardized_traces = ((traces_matrix - np.mean(traces_matrix, axis=0)) # standardize traces to save time
                            / np.std(traces_matrix, axis=0))
     
@@ -120,19 +124,21 @@ def verify_key ( measurement: Measurement, key: np.ndarray ) -> bool:
     
     return ciphertext == ct_bytes
 
+# Todo - add logic for determining the trace file format
+#      - logic for converting binary CT and PT files to numpy arrays
+
 def main():
     known_key_measurement = Measurement(
-        plaintext='cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
-        ciphertext='cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
-        trace='cpa_srcs/traces-00112233445566778899aabbccddeeff.bin'
+        plaintext='../cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
+        ciphertext='../cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
+        trace='../cpa_srcs/traces-00112233445566778899aabbccddeeff.bin'
     )
 
     unknown_key_measurement = Measurement(
-        plaintext='cpa_srcs/plaintext-unknown_key.txt',
-        ciphertext='cpa_srcs/ciphertext-unknown_key.txt',
-        trace='cpa_srcs/traces-unknown_key.bin'
+        plaintext='../cpa_srcs/plaintext-unknown_key.txt',
+        ciphertext='../cpa_srcs/ciphertext-unknown_key.txt',
+        trace='../cpa_srcs/traces-unknown_key.bin'
     )
-    
     key_arr, key_hex = find_key(unknown_key_measurement, key_length_in_bytes = 16, timer=True)
     print("====================================")
     print(f"Key: {key_hex}")
