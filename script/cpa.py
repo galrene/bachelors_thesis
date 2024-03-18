@@ -121,19 +121,20 @@ def verify_key ( measurement: Measurement, key: np.ndarray ) -> bool:
     
     return ciphertext == ct_bytes
 
+# TODO: Key output leaves out trailing zeros, maybe also leading zeros(?)
 
 def main():
-    # known_key_measurement = Measurement(
-    #     plaintext='../cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
-    #     ciphertext='../cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
-    #     trace='../cpa_srcs/traces-00112233445566778899aabbccddeeff.bin'
-    # )
+    known_key_measurement = Measurement(
+        plaintext='../cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
+        ciphertext='../cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
+        trace='../cpa_srcs/traces-00112233445566778899aabbccddeeff.bin'
+    )
 
-    # unknown_key_measurement = Measurement(
-    #     plaintext='../cpa_srcs/plaintext-unknown_key.txt',
-    #     ciphertext='../cpa_srcs/ciphertext-unknown_key.txt',
-    #     trace='../cpa_srcs/traces-unknown_key.bin'
-    # )
+    unknown_key_measurement = Measurement(
+        plaintext='../cpa_srcs/plaintext-unknown_key.txt',
+        ciphertext='../cpa_srcs/ciphertext-unknown_key.txt',
+        trace='../cpa_srcs/traces-unknown_key.bin'
+    )
 
     rds_measurement = Measurement(
         plaintext='../cpa_srcs/test_40k/plaintexts.txt',
