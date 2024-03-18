@@ -106,7 +106,7 @@ def find_key(measurement: Measurement, key_length_in_bytes, timer: bool = False 
         end_time = time()
         print(f"CPA took: {end_time - start_time:0.0f} seconds")
 
-    key_hex = ''.join([hex(i)[2:] for i in key])
+    key_hex = ''.join([hex(i)[2:].zfill(2).upper() for i in key])
     return key, key_hex
 
 def verify_key ( measurement: Measurement, key: np.ndarray ) -> bool:
@@ -120,8 +120,6 @@ def verify_key ( measurement: Measurement, key: np.ndarray ) -> bool:
     ciphertext = cipher.encrypt(pt_bytes)
     
     return ciphertext == ct_bytes
-
-# TODO: Key output leaves out trailing zeros, maybe also leading zeros(?)
 
 def main():
     known_key_measurement = Measurement(
