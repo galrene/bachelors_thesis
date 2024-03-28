@@ -25,7 +25,7 @@ print("Converting "+input_file+" to "+output_file+"...")
 bin_file = open(input_file, 'rb')
 text_file = open(output_file, 'w')
 for i in range(0,int(sys.argv[2])):
-    for j in range(0, 256): # 16
+    for j in range(0, 16):
         text_file.write(str(bin_file.read(1).hex().upper()))
         text_file.write(' ')
     text_file.write('\n')
