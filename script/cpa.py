@@ -33,14 +33,14 @@ def hypothesis(measurement: Measurement, byte_idx: int) -> np.ndarray:
     k[j] = j-th possible key byte
     H[i,j] = sbpx[ p[i] xor k[j] ]
     """
-    # noinspection PyTypeChecker
+    # Load plaintext column
     pt_col = np.loadtxt(measurement.plaintext_path, usecols=byte_idx, converters=hex_to_int, dtype=np.uint8)
-    hypothesis_matrix = np.zeros((measurement.cnt, 256), dtype=np.uint8)
-    assert pt_col.size == measurement.cnt  # check if the pt[byte_idx] column is as long as the number of measurements
 
-    for i in range(measurement.cnt):
-        for j in range(256):
-            hypothesis_matrix[i, j] = sbox[pt_col[i] ^ j]
+    # Generate hypothesis matrix
+    key_xor = np.arange(256, dtype=np.uint8)
+    pt_xor = pt_col[:, np.newaxis] ^ key_xor
+    hypothesis_matrix = sbox[pt_xor]
+
     return hypothesis_matrix
 
 def hamming(hypothesis_matrix: np.ndarray) -> np.ndarray:
@@ -90,23 +90,25 @@ def find_key(measurement: Measurement, key_length_in_bytes, timer: bool = False 
     # numpy matrix of traces from a binary file
     traces_matrix = (np.fromfile(measurement.trace_path, dtype=np.uint8). # load traces
                      reshape(-1, measurement.trace_length))
+    # slice traces matrix from columns 60 to 126
+    # traces_matrix = traces_matrix[:, 60:126]
     standardized_traces = ((traces_matrix - np.mean(traces_matrix, axis=0)) # standardize traces to save time
                            / np.std(traces_matrix, axis=0))
-    
+    print(standardized_traces.shape)
     key = np.zeros(key_length_in_bytes, dtype=np.uint8)
     for i in range(key_length_in_bytes):
         print(f"Calculating key[{i}]")
         hamming_weight_matrix = hamming(hypothesis(measurement, i))
         correlation_matrix = correlate(hamming_weight_matrix, standardized_traces)
         key_byte, _ = find_max(correlation_matrix) # returns key byte and time of the leakage
-        print(f"key[{i}]: 0x{key_byte:02X}")
+        print(f"key[{i}]: 0x{key_byte:02X}, sample: {_}")
         key[i] = key_byte
     
     if timer == True:
         end_time = time()
         print(f"CPA took: {end_time - start_time:0.0f} seconds")
 
-    key_hex = ''.join([hex(i)[2:].zfill(2).upper() for i in key])
+    key_hex = ' '.join([hex(i)[2:].zfill(2).upper() for i in key])
     return key, key_hex
 
 def verify_key ( measurement: Measurement, key: np.ndarray ) -> bool:
@@ -133,17 +135,20 @@ def main():
         ciphertext='../cpa_srcs/ciphertext-unknown_key.txt',
         trace='../cpa_srcs/traces-unknown_key.bin'
     )
+    WORKING_DIR = "/home/galrene/school/bakalarka/RDS_git/basys3/sw/debug/traces/test70k_128w"
 
     rds_measurement = Measurement(
-        plaintext='../cpa_srcs/test_40k/plaintexts.txt',
-        ciphertext='../cpa_srcs/test_40k/ciphertexts.txt',
-        trace='../cpa_srcs/test_40k/hamm_weights.bin'
+        plaintext=f'{WORKING_DIR}/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/hamm_weights.bin'
     )
 
-    key_arr, key_hex = find_key(rds_measurement, key_length_in_bytes = 16, timer=True)
+    measurement = known_key_measurement
+
+    key_arr, key_hex = find_key(measurement, key_length_in_bytes = 16, timer=True)
     print("====================================")
     print(f"Key: {key_hex}")
-    print(f"Ciphertext matches: {verify_key(rds_measurement, key_arr)}")
+    print(f"Ciphertext matches: {verify_key(measurement, key_arr)}")
 
 
 if __name__ == "__main__":
