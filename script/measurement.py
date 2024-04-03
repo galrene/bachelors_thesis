@@ -6,10 +6,12 @@ class Measurement:
     for a power analysis attack.
     """
     def __init__(self, plaintext: str, ciphertext: str, trace: str, correct_key: str = None):
-        if (not os.path.isfile(plaintext)
-                or not os.path.isfile(ciphertext)
-                or not os.path.isfile(trace)):
+        if not os.path.isfile(plaintext):
             raise FileNotFoundError(f"The file '{plaintext}' was not found.")
+        if not os.path.isfile(ciphertext):
+            raise FileNotFoundError(f"The file '{ciphertext}' was not found.")
+        if not os.path.isfile(trace):
+            raise FileNotFoundError(f"The file '{trace}' was not found.")
         self.plaintext_path = plaintext
         self.ciphertext_path = ciphertext
         self.trace_path = trace
