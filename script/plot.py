@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import csv
+import sys
 from os import path
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -40,9 +41,17 @@ def plot ( csv_path, title, n_rows : int = 5, cols_from : int = 0, cols_to : int
     plt.grid(True)
     plt.show()
 
+if (len(sys.argv) < 2):
+    print("Not enough arguments: python3 plot.py /path/to/traces.csv [n_traces_to_plot]")
+    exit()
+if not path.exists(sys.argv[1]):
+    print(f"File {sys.argv[1]} does not exist")
+    exit()
+n_traces = 5
+if len(sys.argv) == 3:
+    n_traces = int(sys.argv[2])
+trace_csv_path = sys.argv[1]
 
-YELLOW_BASYS_TRACE = "/home/galrene/school/bakalarka/RDS_git/basys3/sw/debug/traces/test100_yellowbasys/hamm_weights.csv"
-OG_BASYS_TRACE = "/home/galrene/school/bakalarka/RDS_git/basys3/sw/debug/traces/test100_128tracewidth/sensor_traces_0k.csv"
-NEWEST_TRACE_128W = "/home/galrene/school/bakalarka/RDS_git/basys3/sw/debug/traces/test70k_128w/sensor_traces_70k.csv"
+title = path.split(path.split(trace_csv_path)[0])[1]
 
-plot(csv_to_ham(NEWEST_TRACE_128W), "70k Basys_128", n_rows=6, cols_from=60, cols_to=200)
+plot(csv_to_ham(trace_csv_path), title, n_rows=n_traces, cols_from=60, cols_to=200)
