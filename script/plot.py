@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+Script for plotting traces from a csv file.
+"""
 import csv
 import sys
 from os import path
