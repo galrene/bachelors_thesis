@@ -142,10 +142,11 @@ def find_key(measurement: Measurement, key_length_in_bytes,
     for i in range(key_length_in_bytes):
         hamming_weight_matrix = build_hamming(build_hypothesis(measurement, i))
         correlation_matrix = correlate(hamming_weight_matrix, standardized_traces)
-        key_byte, _ = find_max(correlation_matrix) # returns key byte and time of the leakage
+         # returns key byte and time of the leakage
+        key_byte, tracesample_with_max_corr = find_max(correlation_matrix)
         if measurement.correct_key is not None:
             correct_key_places.append(entropy_guess(correlation_matrix, i, measurement.correct_key))
-        print(f"key[{i}]: 0x{key_byte:02X}, sample: {_}")
+        print(f"key[{i}]: 0x{key_byte:02X}, sample: {tracesample_with_max_corr}")
         key[i] = key_byte
     
     if timer == True:
