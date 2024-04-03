@@ -22,7 +22,9 @@ def csv_to_ham(infile: str):
     if path.exists(outfile):
         print("Hamming weight csv already exists, not converting...")
         return outfile
-
+    else:
+        print("Converting csv to hamming weight csv...")
+    
     with open(infile, "r") as ifile:
         reader = csv.reader(ifile, lineterminator="\n")
         with open(outfile, "w") as ofile:
@@ -57,4 +59,4 @@ trace_csv_path = sys.argv[1]
 
 title = path.split(path.split(trace_csv_path)[0])[1]
 
-plot(csv_to_ham(trace_csv_path), title, n_rows=n_traces, cols_from=60, cols_to=200)
+plot(csv_to_ham(trace_csv_path), title, n_rows=n_traces, cols_from=60, cols_to=130)
