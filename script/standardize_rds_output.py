@@ -24,7 +24,7 @@ def csv_to_bin(infile: str):
     Read a csv file with hexadecimal numbers, get their hamming weight, 
     convert the hamming weight to binary and write result to a binary file
     """
-    outfile = os.path.split(infile)[0]+"/hamm_weights.bin"
+    outfile = os.path.split(infile)[0]+"/traces.bin"
     print(f"Converting {infile} to {outfile}...")
     with open(infile, "r") as ifile:
         reader = csv.reader(ifile, lineterminator="\n")
@@ -50,7 +50,7 @@ def bin_to_txt(input_file: str, n_traces: int):
 
 def find_trace_file ( traces_dir: str ):
     for file in os.listdir(traces_dir):
-        if DEFAULT_TRACES_PART_OF_NAME in file:
+        if DEFAULT_TRACES_PART_OF_NAME in file and file.endswith(".csv"):
             return file
     return None
 
