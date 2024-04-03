@@ -5,7 +5,7 @@ class Measurement:
     Class encapsulating an oscilloscope measurement, it's corresponding plaintext and ciphertext
     for a power analysis attack.
     """
-    def __init__(self, plaintext: str, ciphertext: str, trace: str):
+    def __init__(self, plaintext: str, ciphertext: str, trace: str, correct_key: str = None):
         if (not os.path.isfile(plaintext)
                 or not os.path.isfile(ciphertext)
                 or not os.path.isfile(trace)):
@@ -15,6 +15,7 @@ class Measurement:
         self.trace_path = trace
         self.trace_length = self.get_trace_length()
         self.cnt = self.get_line_count(self.plaintext_path) # number of total measurements
+        self.correct_key = correct_key
 
     def get_trace_length(self) -> int:
         """
