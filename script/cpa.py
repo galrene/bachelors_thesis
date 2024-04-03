@@ -91,36 +91,41 @@ def build_traces_mtx(measurement: Measurement) -> np.ndarray:
     print(f"Traces mtx shape: {standardized_traces.shape}")
     return standardized_traces
 
+def find_idx_in_arr ( arr, key ):
+    for i, element in enumerate(arr):
+        if element[0] == key:
+            return i
 
 def entropy_guess(correlation_matrix, processed_byte_idx, correct_key):
-        key_corr_arr = np.array([], dtype=[('key', np.uint64), ('corr', np.float64)])
-        # TODO
-        # pre kazdy riadok najst maximum v corrcoef matici – pre ktory stlpec dany odhad
-        # najlepsie koreloval s tracom. zoradit podla tychto korelacii, kolkaty v poradi
-        # je realny kluc.
-        # ukladam si riadok index a jeho korelaciu teda element na mieste kde je max v riadku?
+        """
+        V korelacnej matici v kazdom riadku (kazdom z odhadov kluca) najdem maximum a index
+        riadku na ktorom sa dane maximum nachadza (odhad kluca).
+        Tieto maximalne korelacie zoradim zostupne a zistim, kolkaty v poradi je realny kluc, co
+        sa tyka vypocitanej korelacie.
 
+        Riadok korelacnej matice je odhad kluca, index maximalnej hodnoty v riadku (index
+        stlpca v matici) je moment (cislo traceu) v ktorom sa vyskytla najvyssia korelacia.
+        """
+        # array containing key guess and its correlation
+        key_corr_arr = []
         # for each row of correlation matrix find the maximum value and its index
         for (key_guess, row) in enumerate(correlation_matrix):
-            # whole row index is a key guess, max value within that
-            # is the moment of the leakage
+            # whole row index is a key guess, index of max value
+            # within the row is the moment of the leakage
             max_corr_of_guess = np.max(row)
-            key_corr_arr = np.append(key_corr_arr, [key_guess, max_corr_of_guess])
-        # sort entropy guess by the maximum correlation descending
-        key_corr_arr.sort(order='corr')
-        # find index in sorted guesses of correct_key[i]
-        # index of a tuple where the first element is the correct_key[i] and the second is anything
-        
-        key_byte, _ = find_max(correlation_matrix) # returns key byte and time of the leakage
-        place_of_correct_key = np.where(key_corr_arr[:, 0] == correct_key[i])#[1]
-        place_of_max_corr_key = np.where(key_corr_arr[:, 0] == key_byte)#[1]
-        print(f"Found Key: {key_byte}, place: {place_of_max_corr_key};\
-                Correct key: {correct_key[processed_byte_idx]}, place: {place_of_correct_key}")
-        return place_of_correct_key, place_of_max_corr_key
+            key_corr_arr.append([key_guess, max_corr_of_guess])
+        # sort by correlations, descending
+        key_corr_arr.sort(key=lambda x: x[1], reverse=True)
+        place_of_correct_key = find_idx_in_arr(key_corr_arr, correct_key[processed_byte_idx])
+        # key_byte, _ = find_max(correlation_matrix)
+        # print(f"Found Key: 0x{key_byte:02X}\
+        #         Correct key: 0x{correct_key[processed_byte_idx]:02X}, place: {place_of_correct_key}/{correlation_matrix.shape[0]}")
+        print(f"Correct key place in corr mtx: {place_of_correct_key}/{correlation_matrix.shape[0]}")
+        return place_of_correct_key
         
 
-def find_key(measurement: Measurement, key_length_in_bytes, correct_key : np.ndarray = None,
-             timer: bool = False ) -> Tuple[np.ndarray, str]:
+def find_key(measurement: Measurement, key_length_in_bytes,
+              timer: bool = False ) -> Tuple[np.ndarray, str]:
     """
     Return the key based on the maximum correlation for each byte of the key.
     """
@@ -132,18 +137,24 @@ def find_key(measurement: Measurement, key_length_in_bytes, correct_key : np.nda
     standardized_traces = build_traces_mtx(measurement)
     key = np.zeros(key_length_in_bytes, dtype=np.uint8)
 
+    correct_key_places = []
+
     for i in range(key_length_in_bytes):
         hamming_weight_matrix = build_hamming(build_hypothesis(measurement, i))
         correlation_matrix = correlate(hamming_weight_matrix, standardized_traces)
         key_byte, _ = find_max(correlation_matrix) # returns key byte and time of the leakage
-        if correct_key is not None:
-            entropy_guess(correlation_matrix, i, correct_key)
+        if measurement.correct_key is not None:
+            correct_key_places.append(entropy_guess(correlation_matrix, i, measurement.correct_key))
         print(f"key[{i}]: 0x{key_byte:02X}, sample: {_}")
         key[i] = key_byte
     
     if timer == True:
         end_time = time()
         print(f"CPA took: {end_time - start_time:0.0f} seconds")
+    
+    if measurement.correct_key is not None:
+        avg = np.mean(correct_key_places)
+        print(f"Average place of correct key: {avg:.2f}")
 
     key_hex = ' '.join([hex(i)[2:].zfill(2).upper() for i in key])
     return key, key_hex
@@ -164,7 +175,9 @@ def main():
     known_key_measurement = Measurement(
         plaintext='../cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
         ciphertext='../cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
-        trace='../cpa_srcs/traces-00112233445566778899aabbccddeeff.bin'
+        trace='../cpa_srcs/traces-00112233445566778899aabbccddeeff.bin',
+        correct_key=[0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 
+                        0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
     )
 
     unknown_key_measurement = Measurement(
@@ -177,16 +190,16 @@ def main():
     rds_measurement = Measurement(
         plaintext=f'{WORKING_DIR}/plaintexts.txt',
         ciphertext=f'{WORKING_DIR}/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/hamm_weights.bin'
+        trace=f'{WORKING_DIR}/hamm_weights.bin',
+        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
-    correct_key_rds = [0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-                           0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     measurement = rds_measurement
 
-    key_arr, key_hex = find_key(measurement, key_length_in_bytes = 16, timer=True, correct_key=correct_key_rds)
+    key_arr, key_hex = find_key(measurement, key_length_in_bytes = 16, timer=True)
     print("====================================")
     print(f"Key: {key_hex}")
-    print(f"Ciphertext matches: {verify_key(measurement, key_arr)}")
+    print(f"CPA success: {verify_key(measurement, key_arr)}")
 
 
 if __name__ == "__main__":
