@@ -173,29 +173,54 @@ def verify_key ( measurement: Measurement, key: np.ndarray ) -> bool:
     return ciphertext == ct_bytes
 
 def main():
-    known_key_measurement = Measurement(
-        plaintext='../cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
-        ciphertext='../cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
-        trace='../cpa_srcs/traces-00112233445566778899aabbccddeeff.bin',
-        correct_key=[0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 
-                        0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
-    )
+    # known_key_measurement = Measurement(
+    #     plaintext='../cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
+    #     ciphertext='../cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
+    #     trace='../cpa_srcs/traces-00112233445566778899aabbccddeeff.bin',
+    #     correct_key=[0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 
+    #                     0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
+    # )
 
-    unknown_key_measurement = Measurement(
-        plaintext='../cpa_srcs/plaintext-unknown_key.txt',
-        ciphertext='../cpa_srcs/ciphertext-unknown_key.txt',
-        trace='../cpa_srcs/traces-unknown_key.bin'
-    )
-    WORKING_DIR = "../traces/test70k_128w"
+    # unknown_key_measurement = Measurement(
+    #     plaintext='../cpa_srcs/plaintext-unknown_key.txt',
+    #     ciphertext='../cpa_srcs/ciphertext-unknown_key.txt',
+    #     trace='../cpa_srcs/traces-unknown_key.bin'
+    # )
+    WORKING_DIR = "../traces"
 
     rds_measurement = Measurement(
-        plaintext=f'{WORKING_DIR}/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/hamm_weights.bin',
+        plaintext=f'{WORKING_DIR}/test70k_128w/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test70k_128w/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test70k_128w/hamm_weights.bin',
         correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
                         0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
-    measurement = rds_measurement
+
+    rds_measurement_merged_110k = Measurement(
+        plaintext=f'{WORKING_DIR}/test40k70k/plain_merged.txt',
+        ciphertext=f'{WORKING_DIR}/test40k70k/ciph_merged.txt',
+        trace=f'{WORKING_DIR}/test40k70k/traces_merged.bin',
+        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
+    )
+    
+    rds_measurement_merged_160k = Measurement(
+        plaintext=f'{WORKING_DIR}/test40k70k50k/plaintext.txt',
+        ciphertext=f'{WORKING_DIR}/test40k70k50k/ciphertext.txt',
+        trace=f'{WORKING_DIR}/test40k70k50k/traces.bin',
+        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
+    )
+
+    rds_measurement_merged_150k = Measurement(
+        plaintext=f'{WORKING_DIR}/test150k_pt02/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test150k_pt02/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test150k_pt02/traces.bin',
+        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
+    )
+
+    measurement = rds_measurement_merged_150k
 
     key_arr, key_hex = find_key(measurement, key_length_in_bytes = 16, timer=True)
     print("====================================")
