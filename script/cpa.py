@@ -1,7 +1,10 @@
-from typing import List, Tuple
-import numpy as np
 from time import time
+from typing import List, Tuple
+
+import numpy as np
 from Crypto.Cipher import AES
+from colorama import Fore, Style
+
 from measurement import Measurement
 
 def hex_to_int(hex_str: str) -> int:
@@ -26,7 +29,7 @@ sbox = np.array([
     0xE1, 0xF8, 0x98, 0x11, 0x69, 0xD9, 0x8E, 0x94, 0x9B, 0x1E, 0x87, 0xE9, 0xCE, 0x55, 0x28, 0xDF,
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16
     ], dtype='uint8')
-# TODO: check if it actually generates the same hypo mtxs as my slow implementation
+
 def build_hypothesis(measurement: Measurement, byte_idx: int) -> np.ndarray:
     """
     Build a hypothesis matrix for a single byte of the key. Using a single byte of all measured plaintexts.
@@ -172,61 +175,50 @@ def verify_key ( measurement: Measurement, key: np.ndarray ) -> bool:
     
     return ciphertext == ct_bytes
 
-def main():
-    # known_key_measurement = Measurement(
-    #     plaintext='../cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
-    #     ciphertext='../cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
-    #     trace='../cpa_srcs/traces-00112233445566778899aabbccddeeff.bin',
-    #     correct_key=[0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 
-    #                     0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
-    # )
+def print_key ( found_key: np.ndarray, real_key: np.ndarray ) -> bool:
+    print("Found key: ", end='')
+    for byte in range(len(found_key)):
+        keybyte_formatted = f"0x{found_key[byte]:02X}"
+        if found_key[byte] != real_key[byte]:
+            keybyte_formatted = Fore.RED + Style.BRIGHT + f"{keybyte_formatted}" + Style.RESET_ALL
+        else:
+            keybyte_formatted = Fore.GREEN + Style.BRIGHT + f"{keybyte_formatted}" + Style.RESET_ALL
+        print(keybyte_formatted, end=' ')
+    print()
 
-    # unknown_key_measurement = Measurement(
-    #     plaintext='../cpa_srcs/plaintext-unknown_key.txt',
-    #     ciphertext='../cpa_srcs/ciphertext-unknown_key.txt',
-    #     trace='../cpa_srcs/traces-unknown_key.bin'
-    # )
+def main():
+    known_key_measurement = Measurement(
+        plaintext='../cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
+        ciphertext='../cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
+        trace='../cpa_srcs/traces-00112233445566778899aabbccddeeff.bin',
+        correct_key=[0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 
+                        0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
+    )
+
+    unknown_key_measurement = Measurement(
+        plaintext='../cpa_srcs/plaintext-unknown_key.txt',
+        ciphertext='../cpa_srcs/ciphertext-unknown_key.txt',
+        trace='../cpa_srcs/traces-unknown_key.bin'
+    )
     WORKING_DIR = "../traces"
 
-    rds_measurement = Measurement(
-        plaintext=f'{WORKING_DIR}/test70k_128w/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test70k_128w/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test70k_128w/hamm_weights.bin',
+
+    rds_measurement_merged = Measurement(
+        plaintext=f'{WORKING_DIR}/test310k260k/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test310k260k/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test310k260k/traces.bin',
         correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
                         0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
 
-    rds_measurement_merged_110k = Measurement(
-        plaintext=f'{WORKING_DIR}/test40k70k/plain_merged.txt',
-        ciphertext=f'{WORKING_DIR}/test40k70k/ciph_merged.txt',
-        trace=f'{WORKING_DIR}/test40k70k/traces_merged.bin',
-        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    )
-    
-    rds_measurement_merged_160k = Measurement(
-        plaintext=f'{WORKING_DIR}/test40k70k50k/plaintext.txt',
-        ciphertext=f'{WORKING_DIR}/test40k70k50k/ciphertext.txt',
-        trace=f'{WORKING_DIR}/test40k70k50k/traces.bin',
-        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    )
-
-    rds_measurement_merged_150k = Measurement(
-        plaintext=f'{WORKING_DIR}/test150k_pt02/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test150k_pt02/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test150k_pt02/traces.bin',
-        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    )
-
-    measurement = rds_measurement_merged_150k
+    measurement = known_key_measurement
 
     key_arr, key_hex = find_key(measurement, key_length_in_bytes = 16, timer=True)
-    print("====================================")
-    print(f"Key: {key_hex}")
-    print(f"CPA success: {verify_key(measurement, key_arr)}")
-
+    print("========================================================================")
+    print_key(key_arr, measurement.correct_key)
+    success = verify_key(measurement, key_arr)
+    print(f"Encryption success: { Fore.GREEN + str(success) if success == True else Fore.RED + str(success) }")
+ 
 
 if __name__ == "__main__":
     main()
