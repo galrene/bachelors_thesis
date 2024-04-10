@@ -19,17 +19,19 @@ def hamm_weight(hex_num : str) -> int:
     """ Calculate the hamming weight of a hexadecimal number """
     return bin(int(hex_num, 16)).count("1")
 
-def csv_to_bin(infile: str):
+def csv_to_bin(infile: str, n_traces: int):
     """
     Read a csv file with hexadecimal numbers, get their hamming weight, 
     convert the hamming weight to binary and write result to a binary file
     """
-    outfile = os.path.split(infile)[0]+"/traces.bin"
+    outfile = os.path.join(os.path.split(infile)[0], "traces.bin")
     print(f"Converting {infile} to {outfile}...")
     with open(infile, "r") as ifile:
         reader = csv.reader(ifile, lineterminator="\n")
         with open(outfile, "wb") as ofile:
-            for row in reader:
+            for i, row in enumerate(reader):
+                if i == n_traces:
+                    break
                 # calculate hamming weight of each number in row and convert it to binary, then write is as a byte
                 for item in row:
                     ofile.write(bytes([hamm_weight(item)]))
@@ -97,7 +99,7 @@ def main():
     bin_to_txt(f"{traces_dir}/{DEFAULT_CIPHERTEXT_NAME}", n_traces)
     bin_to_txt(f"{traces_dir}/{DEFAULT_PLAINTEXT_NAME}", n_traces)
     bin_to_txt(f"{traces_dir}/{DEFAULT_KEY_NAME}", n_traces)
-    csv_to_bin(f"{traces_dir}/{trace_file}")
+    csv_to_bin(f"{traces_dir}/{trace_file}", n_traces)
     print("Conversion complete.")
     
 
