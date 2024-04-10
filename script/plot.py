@@ -17,10 +17,11 @@ def csv_to_ham(infile: str):
     Read a csv file with hexadecimal numbers, calculate the hamming weight
     for each number and write the result to a new csv file
     """
-    outfile = path.split(infile)[0] + "/hamm_weights.csv"
+    outfile = path.join(path.split(infile)[0],"hamm_weights.csv")
 
     if path.exists(outfile):
         print("Hamming weight csv already exists, not converting...")
+        print (outfile)
         return outfile
     else:
         print("Converting csv to hamming weight csv...")
