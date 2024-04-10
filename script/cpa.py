@@ -186,6 +186,17 @@ def print_key ( found_key: np.ndarray, real_key: np.ndarray ) -> bool:
         print(keybyte_formatted, end=' ')
     print()
 
+def cpa(measurement: Measurement, key_length_in_bytes: int = 16, timer: bool = False) -> bool:
+    key_arr, key_hex = find_key(measurement, key_length_in_bytes, timer=True)
+    print("========================================================================")
+    print_key(key_arr, measurement.correct_key)
+    success = verify_key(measurement, key_arr)
+    print(f"Encryption success: { Fore.GREEN + str(success) if success == True else Fore.RED + str(success) }")
+    print(Style.RESET_ALL)
+    
+    return success
+
+
 def main():
     known_key_measurement = Measurement(
         plaintext='../cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
@@ -202,22 +213,24 @@ def main():
     )
     WORKING_DIR = "../traces"
 
-
-    rds_measurement_merged = Measurement(
-        plaintext=f'{WORKING_DIR}/test310k260k/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test310k260k/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test310k260k/traces.bin',
+    rds_150k110k = Measurement(
+        plaintext=f'{WORKING_DIR}/test150k110k/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test150k110k/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test150k110k/traces.bin',
         correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
                         0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
 
-    measurement = known_key_measurement
 
-    key_arr, key_hex = find_key(measurement, key_length_in_bytes = 16, timer=True)
-    print("========================================================================")
-    print_key(key_arr, measurement.correct_key)
-    success = verify_key(measurement, key_arr)
-    print(f"Encryption success: { Fore.GREEN + str(success) if success == True else Fore.RED + str(success) }")
+    rds_200k = Measurement(
+        plaintext=f'{WORKING_DIR}/test200k_pt03/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test200k_pt03/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test200k_pt03/traces.bin',
+        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
+    )
+
+    cpa(rds_150k110k, timer=True)
  
 
 if __name__ == "__main__":
