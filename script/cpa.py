@@ -74,6 +74,7 @@ def correlate(hamming_mtx: np.ndarray, std_traces_mtx: np.ndarray) -> np.ndarray
     hamming = ((hamming_mtx - np.mean(hamming_mtx, axis=0)) # standardize hamming matrix
                             / np.std(hamming_mtx, axis=0))
     correlation_matrix = ( hamming.T @ std_traces_mtx ) / hamming.shape[0] # complete the correlation calculation
+    correlation_matrix = np.abs(correlation_matrix)
     return correlation_matrix
 
 
@@ -230,7 +231,16 @@ def main():
                         0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
 
-    cpa(rds_150k110k, timer=True)
+    rds_70k = Measurement(
+        plaintext=f'{WORKING_DIR}/test70k_128w/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test70k_128w/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test70k_128w/traces.bin',
+        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
+    )
+
+
+    cpa(rds_70k, timer=True)
  
 
 if __name__ == "__main__":
