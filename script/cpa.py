@@ -87,6 +87,7 @@ def correlate(hamming_mtx: np.ndarray, std_traces_mtx: np.ndarray) -> np.ndarray
 
 
 def find_max(correlation_matrix: np.ndarray):
+    """ Returns key byte and trace sample (time of leakage) with the maximum correlation."""
     max_in_flattened = np.argmax(correlation_matrix)
     max_indices = np.unravel_index(max_in_flattened, correlation_matrix.shape)
     return max_indices
@@ -146,7 +147,7 @@ def find_key(measurement: Measurement, key_length_in_bytes,
         start_time = time()
 
     standardized_traces = build_traces_mtx(measurement)
-    key = np.zeros(key_length_in_bytes, dtype=np.uint8)
+    key_arr = np.zeros(key_length_in_bytes, dtype=np.uint8)
 
     # place of correct key within a sorted array of max correlations
     # for each key guess for given byte. used for entropy calculation
@@ -155,12 +156,11 @@ def find_key(measurement: Measurement, key_length_in_bytes,
     for i in range(key_length_in_bytes):
         hamming_weight_matrix = build_hamming(build_hypothesis(measurement, i))
         correlation_matrix = correlate(hamming_weight_matrix, standardized_traces)
-         # returns key byte and time of the leakage
         key_byte, tracesample_with_max_corr = find_max(correlation_matrix)
         if measurement.correct_key is not None:
             correct_key_places.append(entropy_guess(correlation_matrix, i, measurement.correct_key))
         print(f"key[{i}]: 0x{key_byte:02X}, sample: {tracesample_with_max_corr}")
-        key[i] = key_byte
+        key_arr[i] = key_byte
     
     if timer == True:
         end_time = time()
@@ -170,8 +170,8 @@ def find_key(measurement: Measurement, key_length_in_bytes,
         avg = np.mean(correct_key_places)
         print(f"Average place of correct key correlation value within an array of key guesses: {avg:.2f}")
 
-    key_hex = ' '.join([hex(i)[2:].zfill(2).upper() for i in key])
-    return key, key_hex
+    key_hex_str = ' '.join([hex(i)[2:].zfill(2).upper() for i in key_arr])
+    return key_arr, key_hex_str
 
 def verify_key ( measurement: Measurement, key: np.ndarray ) -> bool:
     key_bytes = bytes(key)
