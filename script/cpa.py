@@ -130,9 +130,6 @@ def entropy_guess(correlation_matrix, processed_byte_idx, correct_key):
         # sort by correlations, descending
         key_corr_arr.sort(key=lambda x: x[1], reverse=True)
         place_of_correct_key = find_idx_in_arr(key_corr_arr, correct_key[processed_byte_idx])
-        # key_byte, _ = find_max(correlation_matrix)
-        # print(f"Found Key: 0x{key_byte:02X}\
-        #         Correct key: 0x{correct_key[processed_byte_idx]:02X}, place: {place_of_correct_key}/{correlation_matrix.shape[0]}")
         print(f"Correct key place: {place_of_correct_key}/{correlation_matrix.shape[0]}")
         return place_of_correct_key
         
