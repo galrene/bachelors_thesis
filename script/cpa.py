@@ -1,5 +1,6 @@
 from time import time
 from typing import List, Tuple
+import os
 
 import numpy as np
 from Crypto.Cipher import AES
@@ -40,6 +41,13 @@ def build_hypothesis(measurement: Measurement, byte_idx: int) -> np.ndarray:
     # Load plaintext column
     pt_col = np.loadtxt(measurement.plaintext_path, usecols=byte_idx, converters=hex_to_int, dtype=np.uint8)
 
+    # pt_length = 16  # Bytes
+    # bin_file_path = os.path.join(os.path.split(measurement.plaintext_path)[0], "plaintexts.bin")
+    # # check if conversion script text output matches sensor binary output
+    # if os.path.exists(bin_file_path):
+    #     pt_col_from_bin = np.fromfile(bin_file_path, dtype=np.uint8).reshape(-1, pt_length)[:, byte_idx]
+    #     assert (pt_col_from_bin == pt_col).all()
+    
     # Generate hypothesis matrix
     key_guess = np.arange(256, dtype=np.uint8)
     pt_xor = pt_col[:, np.newaxis] ^ key_guess
@@ -88,8 +96,8 @@ def build_traces_mtx(measurement: Measurement) -> np.ndarray:
     # numpy matrix of traces from a binary file
     traces_matrix = (np.fromfile(measurement.trace_path, dtype=np.uint8). # load traces
                      reshape(-1, measurement.trace_length))
-    # slice traces matrix from columns 60 to 126
-    # traces_matrix = traces_matrix[:, 60:126]
+    # slice traces matrix to the relevant part
+    # traces_matrix = traces_matrix[:, 64:110]
     standardized_traces = ((traces_matrix - np.mean(traces_matrix, axis=0)) # standardize traces to save time
                            / np.std(traces_matrix, axis=0))
     print(f"Traces mtx shape: {standardized_traces.shape}")
@@ -240,7 +248,7 @@ def main():
     )
 
 
-    cpa(rds_70k, timer=True)
+    cpa(rds_200k, timer=True)
  
 
 if __name__ == "__main__":
