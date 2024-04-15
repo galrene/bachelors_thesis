@@ -132,7 +132,7 @@ def entropy_guess(correlation_matrix, processed_byte_idx, correct_key):
         # key_byte, _ = find_max(correlation_matrix)
         # print(f"Found Key: 0x{key_byte:02X}\
         #         Correct key: 0x{correct_key[processed_byte_idx]:02X}, place: {place_of_correct_key}/{correlation_matrix.shape[0]}")
-        print(f"Correct key place in corr mtx: {place_of_correct_key}/{correlation_matrix.shape[0]}")
+        print(f"Correct key place: {place_of_correct_key}/{correlation_matrix.shape[0]}")
         return place_of_correct_key
         
 
@@ -141,7 +141,6 @@ def find_key(measurement: Measurement, key_length_in_bytes,
     """
     Return the key based on the maximum correlation for each byte of the key.
     """
-    print(f"\nPerforming CPA using {measurement.cnt} measurements.")
     
     if timer == True:
         start_time = time()
@@ -149,6 +148,8 @@ def find_key(measurement: Measurement, key_length_in_bytes,
     standardized_traces = build_traces_mtx(measurement)
     key = np.zeros(key_length_in_bytes, dtype=np.uint8)
 
+    # place of correct key within a sorted array of max correlations
+    # for each key guess for given byte. used for entropy calculation
     correct_key_places = []
 
     for i in range(key_length_in_bytes):
@@ -167,7 +168,7 @@ def find_key(measurement: Measurement, key_length_in_bytes,
     
     if measurement.correct_key is not None:
         avg = np.mean(correct_key_places)
-        print(f"Average place of correct key: {avg:.2f}")
+        print(f"Average place of correct key correlation value within an array of key guesses: {avg:.2f}")
 
     key_hex = ' '.join([hex(i)[2:].zfill(2).upper() for i in key])
     return key, key_hex
@@ -196,6 +197,7 @@ def print_key ( found_key: np.ndarray, real_key: np.ndarray ) -> bool:
     print()
 
 def cpa(measurement: Measurement, key_length_in_bytes: int = 16, timer: bool = False) -> bool:
+    print(f"\nPerforming CPA using {measurement.cnt} measurements.")
     key_arr, key_hex = find_key(measurement, key_length_in_bytes, timer=True)
     print("========================================================================")
     print_key(key_arr, measurement.correct_key)
