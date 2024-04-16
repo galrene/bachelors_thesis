@@ -33,20 +33,14 @@ sbox = np.array([
 
 def build_hypothesis(measurement: Measurement, byte_idx: int) -> np.ndarray:
     """
-    Build a hypothesis matrix for a single byte of the key. Using a single byte of all measured plaintexts.
+    Build a hypothesis matrix for a single byte of the key by reversing the last round of AES and
+    comparing the rounds with the previous one.
     p[i] = i-th measured plaintext
     k[j] = j-th possible key byte
-    H[i,j] = sbpx[ p[i] xor k[j] ]
+    H[i,j] = sbox[ p[i] xor k[j] ]
     """
     # Load plaintext column
     pt_col = np.loadtxt(measurement.plaintext_path, usecols=byte_idx, converters=hex_to_int, dtype=np.uint8)
-
-    # pt_length = 16  # Bytes
-    # bin_file_path = os.path.join(os.path.split(measurement.plaintext_path)[0], "plaintexts.bin")
-    # # check if conversion script text output matches sensor binary output
-    # if os.path.exists(bin_file_path):
-    #     pt_col_from_bin = np.fromfile(bin_file_path, dtype=np.uint8).reshape(-1, pt_length)[:, byte_idx]
-    #     assert (pt_col_from_bin == pt_col).all()
     
     # Generate hypothesis matrix
     key_guess = np.arange(256, dtype=np.uint8)
@@ -64,6 +58,70 @@ def build_hamming(hypothesis_matrix: np.ndarray) -> np.ndarray:
         for j in range(hypothesis_matrix.shape[1]):
             hamming_weight_matrix[i, j] = bin(hypothesis_matrix[i, j]).count("1")
     return hamming_weight_matrix
+
+# inverse shift rows?
+ShiftRowIndex = np.array([ 0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11 ], dtype=np.uint8)
+SBoxInverse = np.array(
+            [0x52 ,0x09 ,0x6A ,0xD5 ,0x30 ,0x36 ,0xA5 ,0x38 ,0xBF ,0x40 ,0xA3 ,0x9E ,0x81 ,0xF3 ,0xD7 ,0xFB
+            ,0x7C ,0xE3 ,0x39 ,0x82 ,0x9B ,0x2F ,0xFF ,0x87 ,0x34 ,0x8E ,0x43 ,0x44 ,0xC4 ,0xDE ,0xE9 ,0xCB
+            ,0x54 ,0x7B ,0x94 ,0x32 ,0xA6 ,0xC2 ,0x23 ,0x3D ,0xEE ,0x4C ,0x95 ,0x0B ,0x42 ,0xFA ,0xC3 ,0x4E
+            ,0x08 ,0x2E ,0xA1 ,0x66 ,0x28 ,0xD9 ,0x24 ,0xB2 ,0x76 ,0x5B ,0xA2 ,0x49 ,0x6D ,0x8B ,0xD1 ,0x25
+            ,0x72 ,0xF8 ,0xF6 ,0x64 ,0x86 ,0x68 ,0x98 ,0x16 ,0xD4 ,0xA4 ,0x5C ,0xCC ,0x5D ,0x65 ,0xB6 ,0x92
+            ,0x6C ,0x70 ,0x48 ,0x50 ,0xFD ,0xED ,0xB9 ,0xDA ,0x5E ,0x15 ,0x46 ,0x57 ,0xA7 ,0x8D ,0x9D ,0x84
+            ,0x90 ,0xD8 ,0xAB ,0x00 ,0x8C ,0xBC ,0xD3 ,0x0A ,0xF7 ,0xE4 ,0x58 ,0x05 ,0xB8 ,0xB3 ,0x45 ,0x06
+            ,0xD0 ,0x2C ,0x1E ,0x8F ,0xCA ,0x3F ,0x0F ,0x02 ,0xC1 ,0xAF ,0xBD ,0x03 ,0x01 ,0x13 ,0x8A ,0x6B
+            ,0x3A ,0x91 ,0x11 ,0x41 ,0x4F ,0x67 ,0xDC ,0xEA ,0x97 ,0xF2 ,0xCF ,0xCE ,0xF0 ,0xB4 ,0xE6 ,0x73
+            ,0x96 ,0xAC ,0x74 ,0x22 ,0xE7 ,0xAD ,0x35 ,0x85 ,0xE2 ,0xF9 ,0x37 ,0xE8 ,0x1C ,0x75 ,0xDF ,0x6E
+            ,0x47 ,0xF1 ,0x1A ,0x71 ,0x1D ,0x29 ,0xC5 ,0x89 ,0x6F ,0xB7 ,0x62 ,0x0E ,0xAA ,0x18 ,0xBE ,0x1B
+            ,0xFC ,0x56 ,0x3E ,0x4B ,0xC6 ,0xD2 ,0x79 ,0x20 ,0x9A ,0xDB ,0xC0 ,0xFE ,0x78 ,0xCD ,0x5A ,0xF4
+            ,0x1F ,0xDD ,0xA8 ,0x33 ,0x88 ,0x07 ,0xC7 ,0x31 ,0xB1 ,0x12 ,0x10 ,0x59 ,0x27 ,0x80 ,0xEC ,0x5F
+            ,0x60 ,0x51 ,0x7F ,0xA9 ,0x19 ,0xB5 ,0x4A ,0x0D ,0x2D ,0xE5 ,0x7A ,0x9F ,0x93 ,0xC9 ,0x9C ,0xEF
+            ,0xA0 ,0xE0 ,0x3B ,0x4D ,0xAE ,0x2A ,0xF5 ,0xB0 ,0xC8 ,0xEB ,0xBB ,0x3C ,0x83 ,0x53 ,0x99 ,0x61
+            ,0x17 ,0x2B ,0x04 ,0x7E ,0xBA ,0x77 ,0xD6 ,0x26 ,0xE1 ,0x69 ,0x14 ,0x63 ,0x55 ,0x21 ,0x0C ,0x7D],
+            dtype=np.uint8)
+
+def hamm_weight(hex_num : int) -> int:
+    """ Calculate the hamming weight of a number """
+    return bin(hex_num).count("1")
+
+def hamm_distance(cipher_text_row: np.array, byte_idx: int, keyguess: int):
+    """
+    Calculate the hamming distance between the AES state register after 9th and after 10th round.
+    matrix out ( ?, ? )
+    k = (0, 256)
+    t = (0, n_traces)
+    out(k, t) = HammingDistance(
+                    ciphertext[ ShiftRowIndex(byte_index) ],
+                    SBoxInverse(k ^ ciphertext[byte_index])
+                );
+    :param cipher_text_row: 
+    :param byte_index: Currently processed byte index within the ciphertext row.
+    :param keyguess: Currently guessed key for the given processed byte.
+    """
+    byte_idx_shifted = ShiftRowIndex[byte_idx]
+    state10 = cipher_text_row[byte_idx_shifted]
+    
+    AddRoundKeyByte = keyguess ^ cipher_text_row[byte_idx]
+    state9 = SBoxInverse[ AddRoundKeyByte ]
+    
+    # hamming_weight of xorred values is their hamming distance
+    return hamm_weight ( state9 ^ state10 )
+
+def build_hamm_distance_mtx(ct, n_traces: int, byte_idx: int):
+    """
+    Kedze budem prehadzovat byty v riadkoch, musim priebezne nacitavat cely riadok ciphertextu,
+    kedzto pri utoku na prvy byte mi stacilo prvy element v riadku a teda som to mohol robit rovno
+    po stlpcoch.
+    """
+    
+    mtx = np.zeros((n_traces, 256))
+
+    # ct_row = ct[trace, :] 
+    for trace in range(n_traces):
+        for keyguess in range(256):
+            mtx[trace, keyguess] = hamm_distance(ct[trace, :], byte_idx, keyguess)
+    return mtx
+
 
 def correlate(hamming_mtx: np.ndarray, std_traces_mtx: np.ndarray) -> np.ndarray:
     """
@@ -146,13 +204,19 @@ def find_key(measurement: Measurement, key_length_in_bytes,
     standardized_traces = build_traces_mtx(measurement)
     key_arr = np.zeros(key_length_in_bytes, dtype=np.uint8)
 
+    # ct_mtx.shape == [ n_traces, 16 ]
+    ct_mtx = np.loadtxt(measurement.ciphertext_path,
+                        converters=hex_to_int, dtype=np.uint8)
+
     # place of correct key within a sorted array of max correlations
     # for each key guess for given byte. used for entropy calculation
     correct_key_places = []
 
     for i in range(key_length_in_bytes):
-        hamming_weight_matrix = build_hamming(build_hypothesis(measurement, i))
-        correlation_matrix = correlate(hamming_weight_matrix, standardized_traces)
+        # hamming_weight_matrix = build_hamming(build_hypothesis(measurement, i))
+        # print(hamming_weight_matrix.shape)
+        hamming_distance_mtx = build_hamm_distance_mtx(ct_mtx, measurement.cnt, i)
+        correlation_matrix = correlate(hamming_distance_mtx, standardized_traces)
         key_byte, tracesample_with_max_corr = find_max(correlation_matrix)
         if measurement.correct_key is not None:
             correct_key_places.append(entropy_guess(correlation_matrix, i, measurement.correct_key))
@@ -166,7 +230,7 @@ def find_key(measurement: Measurement, key_length_in_bytes,
     if measurement.correct_key is not None:
         avg = np.mean(correct_key_places)
         print(f"Average place of correct key correlation value within an array of key guesses: {avg:.2f}")
-
+    
     key_hex_str = ' '.join([hex(i)[2:].zfill(2).upper() for i in key_arr])
     return key_arr, key_hex_str
 
@@ -210,7 +274,7 @@ def main():
         plaintext='../cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
         ciphertext='../cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
         trace='../cpa_srcs/traces-00112233445566778899aabbccddeeff.bin',
-        correct_key=[0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 
+        encryption_key=[0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 
                         0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
     )
 
@@ -221,33 +285,16 @@ def main():
     )
     WORKING_DIR = "../traces"
 
-    rds_150k110k = Measurement(
-        plaintext=f'{WORKING_DIR}/test150k110k/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test150k110k/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test150k110k/traces.bin',
-        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    )
-
-
-    rds_200k = Measurement(
-        plaintext=f'{WORKING_DIR}/test200k_pt03/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test200k_pt03/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test200k_pt03/traces.bin',
-        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    )
-
     rds_70k = Measurement(
         plaintext=f'{WORKING_DIR}/test70k_128w/plaintexts.txt',
         ciphertext=f'{WORKING_DIR}/test70k_128w/ciphertexts.txt',
         trace=f'{WORKING_DIR}/test70k_128w/traces.bin',
-        correct_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
+        encryption_key=[0xE0, 0x7f, 0x16, 0xbd, 0xb9, 0xe5, 0x03,
+                        0x46, 0xa2, 0x27, 0x7c, 0xd3, 0x82, 0x77, 0x42, 0x70]
     )
 
 
-    cpa(rds_200k, timer=True)
+    cpa(rds_70k, timer=True)
  
 
 if __name__ == "__main__":
