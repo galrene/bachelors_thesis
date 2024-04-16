@@ -4,8 +4,12 @@ class Measurement:
     """
     Class encapsulating an oscilloscope measurement, it's corresponding plaintext and ciphertext
     for a power analysis attack.
+    :plaintext str: path to plaintext file with hex space separated bytes
+    :ciphertext str: path to ciphertext file with hex space separated bytes
+    :trace str: path to trace file binary uint8_t samples
+    :encryption_key: str: master key before any key scheduling occurs
     """
-    def __init__(self, plaintext: str, ciphertext: str, trace: str, correct_key: str = None):
+    def __init__(self, plaintext: str, ciphertext: str, trace: str, encryption_key: str = None):
         if not os.path.isfile(plaintext):
             raise FileNotFoundError(f"The file '{plaintext}' was not found.")
         if not os.path.isfile(ciphertext):
@@ -17,7 +21,7 @@ class Measurement:
         self.trace_path = trace
         self.trace_length = self.get_trace_length()
         self.cnt = self.get_line_count(self.plaintext_path) # number of total measurements
-        self.correct_key = correct_key
+        self.encryption_key = encryption_key
 
     def get_trace_length(self) -> int:
         """
