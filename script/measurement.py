@@ -1,4 +1,5 @@
 import os
+from numpy import array
 
 class Measurement:
     """
@@ -7,11 +8,11 @@ class Measurement:
     :param str plaintext: path to plaintext file with hex space separated bytes
     :param str ciphertext: path to ciphertext file with hex space separated bytes
     :param str trace: path to trace file binary uint8_t samples
-    :param str encryption_key: master key before any key scheduling occurs
+    :param np.array encryption_key: master key before any key scheduling occurs
     :param int key_length: key length in bytes
     """
     def __init__(self, plaintext: str, ciphertext: str,
-                  trace: str, encryption_key: str = None,
+                  trace: str, encryption_key: array = None,
                   key_length: int = 16):
         if not os.path.isfile(plaintext):
             raise FileNotFoundError(f"The file '{plaintext}' was not found.")
@@ -19,6 +20,8 @@ class Measurement:
             raise FileNotFoundError(f"The file '{ciphertext}' was not found.")
         if not os.path.isfile(trace):
             raise FileNotFoundError(f"The file '{trace}' was not found.")
+        if encryption_key is None:
+            print(f"Warning: encryption key not provided for {trace}.")
         self.plaintext_path = plaintext
         self.ciphertext_path = ciphertext
         self.trace_path = trace
