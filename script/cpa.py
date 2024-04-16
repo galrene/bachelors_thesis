@@ -5,6 +5,7 @@ import os
 import numpy as np
 from Crypto.Cipher import AES
 from colorama import Fore, Style
+from aeskeyschedule import reverse_key_schedule, key_schedule
 
 from measurement import Measurement
 
@@ -69,7 +70,7 @@ def build_hypothesis(measurement: Measurement, byte_idx: int) -> np.ndarray:
 
     return hypothesis_matrix
 
-def build_hamming(hypothesis_matrix: np.ndarray) -> np.ndarray:
+def build_hamming_weight_mtx(hypothesis_matrix: np.ndarray) -> np.ndarray:
     """
     Build a hamming weight matrix for a hypothesis matrix.
     """
@@ -182,34 +183,45 @@ def entropy_guess(correlation_matrix, processed_byte_idx, correct_key):
         return place_of_correct_key
         
 
-def find_key(measurement: Measurement, key_length_in_bytes,
+def find_key(measurement: Measurement, key_length_in_bytes, attack_mode: str = "lrnd",
               timer: bool = False ) -> Tuple[np.ndarray, str]:
     """
     Return the key based on the maximum correlation for each byte of the key.
     """
+    if attack_mode not in [ "lrnd", "frnd" ]:
+        raise ValueError("Unknown attack mode.")
     
-    if timer == True:
-        start_time = time()
+    if timer == True: start_time = time()
 
     standardized_traces = build_traces_mtx(measurement)
     key_arr = np.zeros(key_length_in_bytes, dtype=np.uint8)
 
-    # ct_mtx.shape == [ n_traces, 16 ]
-    ct_mtx = np.loadtxt(measurement.ciphertext_path,
-                        converters=hex_to_int, dtype=np.uint8)
+    searched_key = measurement.encryption_key
+    if attack_mode == "lrnd":
+        # ct_mtx.shape == [ n_traces, 16 ]
+        ct_mtx = np.loadtxt(measurement.ciphertext_path,
+                            converters=hex_to_int, dtype=np.uint8)
+        # TODO: convert this to np.array
+        #searched_key = [print(keybyte) for keybyte in key_schedule(bytes(measurement.encryption_key))]
+        #print(searched_key)
+        
+        
 
     # place of correct key within a sorted array of max correlations
     # for each key guess for given byte. used for entropy calculation
     correct_key_places = []
 
     for i in range(key_length_in_bytes):
-        # used for attacking the first byte
-        # hamming_weight_matrix = build_hamming(build_hypothesis(measurement, i))
-        hamming_distance_mtx = build_hamm_distance_mtx(ct_mtx, measurement.cnt, i)
-        correlation_matrix = correlate(hamming_distance_mtx, standardized_traces)
+        if attack_mode == "lrnd":
+            hamm_mtx = build_hamm_distance_mtx(ct_mtx, measurement.cnt, i)
+        elif attack_mode == "frnd":
+            hamm_mtx = build_hamming_weight_mtx(build_hypothesis(measurement, i))
+
+        correlation_matrix = correlate(hamm_mtx, standardized_traces)
         key_byte, tracesample_with_max_corr = find_max(correlation_matrix)
-        if measurement.encryption_key is not None:
-            correct_key_places.append(entropy_guess(correlation_matrix, i, measurement.encryption_key))
+        
+        correct_key_places.append(entropy_guess(correlation_matrix, i, searched_key))
+        
         print(f"key[{i}]: 0x{key_byte:02X}, sample: {tracesample_with_max_corr}")
         key_arr[i] = key_byte
     
@@ -217,9 +229,7 @@ def find_key(measurement: Measurement, key_length_in_bytes,
         end_time = time()
         print(f"CPA took: {end_time - start_time:0.0f} seconds")
     
-    if measurement.encryption_key is not None:
-        avg = np.mean(correct_key_places)
-        print(f"Average place of correct key correlation value within an array of key guesses: {avg:.2f}")
+    print(f"Guessed entropy: {np.mean(correct_key_places):.2f}")
     
     key_hex_str = ' '.join([hex(i)[2:].zfill(2).upper() for i in key_arr])
     return key_arr, key_hex_str
@@ -247,14 +257,33 @@ def print_key ( found_key: np.ndarray, real_key: np.ndarray ) -> bool:
         print(keybyte_formatted, end=' ')
     print()
 
-def cpa(measurement: Measurement, key_length_in_bytes: int = 16, timer: bool = False) -> bool:
-    print(f"\nPerforming CPA using {measurement.cnt} measurements.")
-    key_arr, key_hex = find_key(measurement, key_length_in_bytes, timer=True)
-    print("========================================================================")
+def enc_key_from_last_round_key ( key_arr: np.array ) -> np.array:
+    encryption_key = reverse_key_schedule(bytes(key_arr), 10)
+    return np.frombuffer(encryption_key, dtype=np.uint8)
+
+def cpa(measurement: Measurement, attack_mode: str = "lrnd", timer: bool = False) -> bool:
+    """
+    Perform correlation power analysis on given measurement.
+    :param Measurement measurement: Traces, PTs, CTs
+    :param str attack_mode: lrnd for last round attack, frnd for first round attack
+    """
+    match attack_mode:
+        case "lrnd":
+            print(f"\nPerforming last round CPA using {measurement.cnt} measurements.")
+            key_arr, key_hex = find_key(measurement, measurement.key_length, timer=True, attack_mode="lrnd")
+            key_arr = enc_key_from_last_round_key(key_arr)
+        case "frnd":
+            print(f"\nPerforming first round CPA using {measurement.cnt} measurements.")
+            key_arr, key_hex = find_key(measurement, measurement.key_length, timer=True, attack_mode="frnd")
+        case _:
+            raise ValueError("Unknown attack mode.")
+
+    print("============================================================================")
     print_key(key_arr, measurement.encryption_key)
+
     success = verify_key(measurement, key_arr)
     print(f"Encryption success: { Fore.GREEN + str(success) if success == True else Fore.RED + str(success) }")
-    print(Style.RESET_ALL)
+    print(Style.RESET_ALL, end='')
     
     return success
 
@@ -279,11 +308,11 @@ def main():
         plaintext=f'{WORKING_DIR}/test70k_128w/plaintexts.txt',
         ciphertext=f'{WORKING_DIR}/test70k_128w/ciphertexts.txt',
         trace=f'{WORKING_DIR}/test70k_128w/traces.bin',
-        encryption_key=[0xE0, 0x7f, 0x16, 0xbd, 0xb9, 0xe5, 0x03,
-                        0x46, 0xa2, 0x27, 0x7c, 0xd3, 0x82, 0x77, 0x42, 0x70]
+        encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
-
-
+    
+    cpa(known_key_measurement, timer=True, attack_mode="frnd")
     cpa(rds_70k, timer=True)
  
 
