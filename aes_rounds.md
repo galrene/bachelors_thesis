@@ -1,0 +1,34 @@
+# Encryption
+
+## 9th round
+StateRegister
+SubBytes
+ShiftRows
+MixColumns
+AddRoundKey
+## 10th round
+StateRegister
+SubBytes
+ShiftRows
+AddRoundKey
+== ciphertext ==
+
+i:  0   1    2    3     4   5    6    7     8   9    10   11   12   13   14   15
+[ 0x0a 0x0b 0x0c 0x0d 0x0e 0x0f 0x0g 0x0h 0x0i 0x0j 0x0k 0x0l 0x0m 0x0n 0x0o 0x0p ]
+ShiftRows()
+[ 0x0a,0x0n,0x0k,0x0h,0x0e,0x0b,0x0o,0x0l,0x0i,0x0f,0x0c,0x0p,0x0m,0x0j,0x0g,0x0d ]
+
+# Decryption
+
+== ciphertext ==
+## 1st round
+AddRoundKey     <-
+InvShiftRows
+InvSubBytes
+InvMixColumns
+AddRoundKey
+## 2nd round
+InvShiftRows
+InvSubBytes
+InvMixColumns
+AddRoundKey
