@@ -12,7 +12,7 @@ def hex_to_int(hex_str: str) -> int:
     return int(hex_str, 16)
 
 
-sbox = np.array([
+SBox = np.array([
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
     0xB7, 0xFD, 0x93, 0x26, 0x36, 0x3F, 0xF7, 0xCC, 0x34, 0xA5, 0xE5, 0xF1, 0x71, 0xD8, 0x31, 0x15,
@@ -31,35 +31,6 @@ sbox = np.array([
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16
     ], dtype='uint8')
 
-def build_hypothesis(measurement: Measurement, byte_idx: int) -> np.ndarray:
-    """
-    Build a hypothesis matrix for a single byte of the key by reversing the last round of AES and
-    comparing the rounds with the previous one.
-    p[i] = i-th measured plaintext
-    k[j] = j-th possible key byte
-    H[i,j] = sbox[ p[i] xor k[j] ]
-    """
-    # Load plaintext column
-    pt_col = np.loadtxt(measurement.plaintext_path, usecols=byte_idx, converters=hex_to_int, dtype=np.uint8)
-    
-    # Generate hypothesis matrix
-    key_guess = np.arange(256, dtype=np.uint8)
-    pt_xor = pt_col[:, np.newaxis] ^ key_guess
-    hypothesis_matrix = sbox[pt_xor]
-
-    return hypothesis_matrix
-
-def build_hamming(hypothesis_matrix: np.ndarray) -> np.ndarray:
-    """
-    Build a hamming weight matrix for a hypothesis matrix.
-    """
-    hamming_weight_matrix = np.zeros(hypothesis_matrix.shape, dtype=np.uint8)
-    for i in range(hypothesis_matrix.shape[0]):
-        for j in range(hypothesis_matrix.shape[1]):
-            hamming_weight_matrix[i, j] = bin(hypothesis_matrix[i, j]).count("1")
-    return hamming_weight_matrix
-
-# inverse shift rows?
 ShiftRowIndex = np.array([ 0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11 ], dtype=np.uint8)
 SBoxInverse = np.array(
             [0x52 ,0x09 ,0x6A ,0xD5 ,0x30 ,0x36 ,0xA5 ,0x38 ,0xBF ,0x40 ,0xA3 ,0x9E ,0x81 ,0xF3 ,0xD7 ,0xFB
@@ -80,6 +51,34 @@ SBoxInverse = np.array(
             ,0x17 ,0x2B ,0x04 ,0x7E ,0xBA ,0x77 ,0xD6 ,0x26 ,0xE1 ,0x69 ,0x14 ,0x63 ,0x55 ,0x21 ,0x0C ,0x7D],
             dtype=np.uint8)
 
+def build_hypothesis(measurement: Measurement, byte_idx: int) -> np.ndarray:
+    """
+    Build a hypothesis matrix for a single byte of the key by reversing the last round of AES and
+    comparing the rounds with the previous one.
+    p[i] = i-th measured plaintext
+    k[j] = j-th possible key byte
+    H[i,j] = sbox[ p[i] xor k[j] ]
+    """
+    # Load plaintext column
+    pt_col = np.loadtxt(measurement.plaintext_path, usecols=byte_idx, converters=hex_to_int, dtype=np.uint8)
+    
+    # Generate hypothesis matrix
+    key_guess = np.arange(256, dtype=np.uint8)
+    pt_xor = pt_col[:, np.newaxis] ^ key_guess
+    hypothesis_matrix = SBox[pt_xor]
+
+    return hypothesis_matrix
+
+def build_hamming(hypothesis_matrix: np.ndarray) -> np.ndarray:
+    """
+    Build a hamming weight matrix for a hypothesis matrix.
+    """
+    hamming_weight_matrix = np.zeros(hypothesis_matrix.shape, dtype=np.uint8)
+    for i in range(hypothesis_matrix.shape[0]):
+        for j in range(hypothesis_matrix.shape[1]):
+            hamming_weight_matrix[i, j] = bin(hypothesis_matrix[i, j]).count("1")
+    return hamming_weight_matrix
+
 def hamm_weight(hex_num : int) -> int:
     """ Calculate the hamming weight of a number """
     return bin(hex_num).count("1")
@@ -87,13 +86,6 @@ def hamm_weight(hex_num : int) -> int:
 def hamm_distance(cipher_text_row: np.array, byte_idx: int, keyguess: int):
     """
     Calculate the hamming distance between the AES state register after 9th and after 10th round.
-    matrix out ( ?, ? )
-    k = (0, 256)
-    t = (0, n_traces)
-    out(k, t) = HammingDistance(
-                    ciphertext[ ShiftRowIndex(byte_index) ],
-                    SBoxInverse(k ^ ciphertext[byte_index])
-                );
     :param cipher_text_row: 
     :param byte_index: Currently processed byte index within the ciphertext row.
     :param keyguess: Currently guessed key for the given processed byte.
@@ -113,9 +105,7 @@ def build_hamm_distance_mtx(ct, n_traces: int, byte_idx: int):
     kedzto pri utoku na prvy byte mi stacilo prvy element v riadku a teda som to mohol robit rovno
     po stlpcoch.
     """
-    
     mtx = np.zeros((n_traces, 256))
-
     # ct_row = ct[trace, :] 
     for trace in range(n_traces):
         for keyguess in range(256):
@@ -213,13 +203,13 @@ def find_key(measurement: Measurement, key_length_in_bytes,
     correct_key_places = []
 
     for i in range(key_length_in_bytes):
+        # used for attacking the first byte
         # hamming_weight_matrix = build_hamming(build_hypothesis(measurement, i))
-        # print(hamming_weight_matrix.shape)
         hamming_distance_mtx = build_hamm_distance_mtx(ct_mtx, measurement.cnt, i)
         correlation_matrix = correlate(hamming_distance_mtx, standardized_traces)
         key_byte, tracesample_with_max_corr = find_max(correlation_matrix)
-        if measurement.correct_key is not None:
-            correct_key_places.append(entropy_guess(correlation_matrix, i, measurement.correct_key))
+        if measurement.encryption_key is not None:
+            correct_key_places.append(entropy_guess(correlation_matrix, i, measurement.encryption_key))
         print(f"key[{i}]: 0x{key_byte:02X}, sample: {tracesample_with_max_corr}")
         key_arr[i] = key_byte
     
@@ -227,7 +217,7 @@ def find_key(measurement: Measurement, key_length_in_bytes,
         end_time = time()
         print(f"CPA took: {end_time - start_time:0.0f} seconds")
     
-    if measurement.correct_key is not None:
+    if measurement.encryption_key is not None:
         avg = np.mean(correct_key_places)
         print(f"Average place of correct key correlation value within an array of key guesses: {avg:.2f}")
     
@@ -261,7 +251,7 @@ def cpa(measurement: Measurement, key_length_in_bytes: int = 16, timer: bool = F
     print(f"\nPerforming CPA using {measurement.cnt} measurements.")
     key_arr, key_hex = find_key(measurement, key_length_in_bytes, timer=True)
     print("========================================================================")
-    print_key(key_arr, measurement.correct_key)
+    print_key(key_arr, measurement.encryption_key)
     success = verify_key(measurement, key_arr)
     print(f"Encryption success: { Fore.GREEN + str(success) if success == True else Fore.RED + str(success) }")
     print(Style.RESET_ALL)
