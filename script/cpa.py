@@ -246,15 +246,21 @@ def verify_key ( measurement: Measurement, key: np.ndarray ) -> bool:
     
     return ciphertext == ct_bytes
 
+def red_bg ( text: str ) -> str:
+    return Fore.RED + Style.BRIGHT + text + Style.RESET_ALL
+
+def green_bg ( text: str ) -> str:
+    return Fore.GREEN + Style.BRIGHT + text + Style.RESET_ALL
+
 def print_key ( found_key: np.ndarray, real_key: np.ndarray ) -> bool:
     print("Found key: ", end='')
     for byte in range(len(found_key)):
         keybyte_formatted = f"0x{found_key[byte]:02X}"
-        if found_key[byte] != real_key[byte]:
-            keybyte_formatted = Fore.RED + Style.BRIGHT + f"{keybyte_formatted}" + Style.RESET_ALL
-        else:
-            keybyte_formatted = Fore.GREEN + Style.BRIGHT + f"{keybyte_formatted}" + Style.RESET_ALL
-        print(keybyte_formatted, end=' ')
+        print(
+               green_bg(keybyte_formatted) 
+               if found_key[byte] == real_key[byte]
+                else red_bg(keybyte_formatted), end=' '
+        )
     print()
 
 def enc_key_from_last_round_key ( key_arr: np.array ) -> np.array:
@@ -313,7 +319,7 @@ def main():
     )
     
     cpa(known_key_measurement, timer=True, attack_mode="frnd")
-    cpa(rds_70k, timer=True)
+    # cpa(rds_70k, timer=True)
  
 
 if __name__ == "__main__":
