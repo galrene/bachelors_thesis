@@ -32,6 +32,7 @@ SBox = np.array([
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16
     ], dtype='uint8')
 
+
 ShiftRowIndex = np.array([ 0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11 ], dtype=np.uint8)
 SBoxInverse = np.array(
             [0x52 ,0x09 ,0x6A ,0xD5 ,0x30 ,0x36 ,0xA5 ,0x38 ,0xBF ,0x40 ,0xA3 ,0x9E ,0x81 ,0xF3 ,0xD7 ,0xFB
@@ -208,7 +209,7 @@ def find_key(measurement: Measurement, key_length_in_bytes, attack_mode: str = "
         
 
     # place of correct key within a sorted array of max correlations
-    # for each key guess for given byte. used for entropy calculation
+    # for each key guess for given byte. used for guessing entropy calculation
     correct_key_places = []
 
     for i in range(key_length_in_bytes):
@@ -229,7 +230,7 @@ def find_key(measurement: Measurement, key_length_in_bytes, attack_mode: str = "
         end_time = time()
         print(f"CPA took: {end_time - start_time:0.0f} seconds")
     
-    print(f"Guessed entropy: {np.mean(correct_key_places):.2f}")
+    print(f"Guessing entropy: {np.mean(correct_key_places):.2f}")
     
     key_hex_str = ' '.join([hex(i)[2:].zfill(2).upper() for i in key_arr])
     return key_arr, key_hex_str
