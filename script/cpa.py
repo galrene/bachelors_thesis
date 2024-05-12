@@ -179,7 +179,7 @@ def guessing_entropy(correlation_matrix, processed_byte_idx, correct_key):
         # sort by correlations, descending
         key_corr_arr.sort(key=lambda x: x[1], reverse=True)
         place_of_correct_key = find_idx_in_arr(key_corr_arr, correct_key[processed_byte_idx])
-        print(f"Correct key place: {place_of_correct_key}/{correlation_matrix.shape[0]}")
+        print(f"Byte guessing entropy: {place_of_correct_key}/{correlation_matrix.shape[0]}")
         return place_of_correct_key
         
 
@@ -203,6 +203,7 @@ def find_key(measurement: Measurement, key_length_in_bytes, attack_mode: str = "
                             converters=hex_to_int, dtype=np.uint8)
         # TODO: convert this to np.array
         #searched_key = [print(keybyte) for keybyte in key_schedule(bytes(measurement.encryption_key))]
+        searched_key = np.array([0xe0, 0x7f, 0x16, 0xbd, 0xb9, 0xe5, 0x03, 0x46, 0xa2, 0x27, 0x7c, 0xd3, 0x82, 0x77, 0x42, 0x70],dtype=np.uint8)
         #print(searched_key)
         
         
@@ -288,7 +289,7 @@ def cpa(measurement: Measurement, attack_mode: str = "lrnd", timer: bool = False
     print_key(key_arr, measurement.encryption_key)
 
     success = verify_key(measurement, key_arr)
-    print(f"Encryption success: { Fore.GREEN + str(success) if success == True else Fore.RED + str(success) }")
+    print(f"Attack success: { Fore.GREEN + str(success) if success == True else Fore.RED + str(success) }")
     print(Style.RESET_ALL, end='')
     
     return success
@@ -318,6 +319,13 @@ def main():
         encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
                         0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
+    rds_20k = Measurement(
+        plaintext=f'{WORKING_DIR}/test20k_from40k/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test20k_from40k/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test20k_from40k/traces.bin',
+        encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
+    )
     rds_40k = Measurement(
         plaintext=f'{WORKING_DIR}/test40k/plaintexts.txt',
         ciphertext=f'{WORKING_DIR}/test40k/ciphertexts.txt',
@@ -326,15 +334,7 @@ def main():
                         0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
     
-    rds_20k = Measurement(
-        plaintext=f'{WORKING_DIR}/test20k_from40k/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test20k_from40k/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test20k_from40k/traces.bin',
-        encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    )
-#    cpa(known_key_measurement, timer=True, attack_mode="frnd") 
-    cpa(rds_20k, timer=True)
+    cpa(rds_20k, timer=True, attack_mode="lrnd")
 
 if __name__ == "__main__":
     main()
