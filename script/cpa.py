@@ -286,7 +286,7 @@ def cpa(measurement: Measurement, attack_mode: str = "lrnd", timer: bool = False
         case _:
             raise ValueError("Unknown attack mode.")
 
-    print("============================================================================")
+    print("==========================================================================================")
     print_key(key_arr, measurement.encryption_key)
 
     success = verify_key(measurement, key_arr)
@@ -299,43 +299,44 @@ def cpa(measurement: Measurement, attack_mode: str = "lrnd", timer: bool = False
 def main():
     WORKING_DIR = "../traces"
 
-    known_key_measurement = Measurement(
-        plaintext=f'{WORKING_DIR}/cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
-        ciphertext=f'{WORKING_DIR}/cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
-        trace=f'{WORKING_DIR}/cpa_srcs/traces-00112233445566778899aabbccddeeff.bin',
-        encryption_key=[0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 
-                        0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
-    )
+    # # known_key_measurement = Measurement(
+    # #     plaintext=f'{WORKING_DIR}/cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
+    # #     ciphertext=f'{WORKING_DIR}/cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
+    # #     trace=f'{WORKING_DIR}/cpa_srcs/traces-00112233445566778899aabbccddeeff.bin',
+    # #     encryption_key=[0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 
+    # #                     0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
+    # # )
 
-    unknown_key_measurement = Measurement(
-        plaintext=f'{WORKING_DIR}/cpa_srcs/plaintext-unknown_key.txt',
-        ciphertext=f'{WORKING_DIR}/cpa_srcs/ciphertext-unknown_key.txt',
-        trace=f'{WORKING_DIR}/cpa_srcs/traces-unknown_key.bin'
-    )
+    # # unknown_key_measurement = Measurement(
+    # #     plaintext=f'{WORKING_DIR}/cpa_srcs/plaintext-unknown_key.txt',
+    # #     ciphertext=f'{WORKING_DIR}/cpa_srcs/ciphertext-unknown_key.txt',
+    # #     trace=f'{WORKING_DIR}/cpa_srcs/traces-unknown_key.bin'
+    # # )
 
-    rds_70k = Measurement(
-        plaintext=f'{WORKING_DIR}/test70k_128w/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test70k_128w/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test70k_128w/traces.bin',
-        encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    )
-    rds_20k = Measurement(
-        plaintext=f'{WORKING_DIR}/test20k_from40k/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test20k_from40k/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test20k_from40k/traces.bin',
-        encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    )
+    # rds_70k = Measurement(
+    #     plaintext=f'{WORKING_DIR}/test70k_128w/plaintexts.txt',
+    #     ciphertext=f'{WORKING_DIR}/test70k_128w/ciphertexts.txt',
+    #     trace=f'{WORKING_DIR}/test70k_128w/traces.bin',
+    #     encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+    #                     0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
+    # )
+    # rds_20k = Measurement(
+    #     plaintext=f'{WORKING_DIR}/test20k_from40k/plaintexts.txt',
+    #     ciphertext=f'{WORKING_DIR}/test20k_from40k/ciphertexts.txt',
+    #     trace=f'{WORKING_DIR}/test20k_from40k/traces.bin',
+    #     encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+    #                     0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
+    # )
     rds_40k = Measurement(
-        plaintext=f'{WORKING_DIR}/test40k/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test40k/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test40k/traces.bin',
+        plaintext=f'{WORKING_DIR}/test_40k/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test_40k/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test_40k/traces.bin',
         encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
                         0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
     
-    cpa(rds_20k, timer=True, attack_mode="lrnd")
+    cpa(rds_40k, timer=True, attack_mode="lrnd")
+    # cpa(rds_20k, timer=True, attack_mode="lrnd")
 
 if __name__ == "__main__":
     main()
