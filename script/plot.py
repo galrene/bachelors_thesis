@@ -45,6 +45,8 @@ def plot ( csv_path, title, n_rows : int = 5, cols_from : int = 0, cols_to : int
     plt.xlabel('trace sample')
     plt.ylabel('measured value')
     plt.grid(True)
+    import numpy as np
+    plt.xticks(np.arange(65, 110, 1))  # Adjust the range and step size as needed
     plt.show()
 
 if (len(sys.argv) < 2):
