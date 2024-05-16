@@ -264,6 +264,7 @@ def green_bg ( text: str ) -> str:
     return Fore.GREEN + Style.BRIGHT + text + Style.RESET_ALL
 
 def print_key ( found_key: np.ndarray, real_key: np.ndarray = None ) -> bool:
+    # the initial encryption key
     print("Found key: ", end='')
     # if real_key is not provided, print only the found key
     if real_key is None:
@@ -294,8 +295,8 @@ def cpa(measurement: Measurement, n_traces: int = 0, attack_mode: str = "lrnd", 
     match attack_mode:
         case "lrnd":
             print(f"\nPerforming last round CPA using {n_traces} measurements.")
-            key_arr, key_hex, ge = find_key(measurement, measurement.key_length, n_traces=n_traces, timer=True, attack_mode="lrnd")
-            key_arr = enc_key_from_last_round_key(key_arr)
+            last_round_key_arr, key_hex, ge = find_key(measurement, measurement.key_length, n_traces=n_traces, timer=True, attack_mode="lrnd")
+            key_arr = enc_key_from_last_round_key(last_round_key_arr)
         case "frnd":
             print(f"\nPerforming first round CPA using {n_traces} measurements.")
             key_arr, key_hex, ge = find_key(measurement, measurement.key_length, n_traces=n_traces, timer=True, attack_mode="frnd")
@@ -306,19 +307,22 @@ def cpa(measurement: Measurement, n_traces: int = 0, attack_mode: str = "lrnd", 
     print_key(key_arr, measurement.encryption_key)
 
     success = verify_key(measurement, key_arr)
+    if success == False and attack_mode == "lrnd":
+        print("Full last round key wasn't found, even its correct subkeys weren't reversed into correct encryption key subkeys.")
+        print("Found last round key: ", " ".join([hex(byte)[2:].upper() for byte in last_round_key_arr]))
     print(f"Attack success: { Fore.GREEN + str(success) if success == True else Fore.RED + str(success) }")
     print(Style.RESET_ALL, end='')
     
     return success, ge
 
-def plot_ge_vs_ntraces ( results: List[Tuple[int, float]] ):
+def plot_ge_vs_ntraces ( results: List[Tuple[int, float]], trace_cnt, trace_increment_step ):
     import matplotlib.pyplot as plt
     n_traces, ge = zip(*results)
     plt.plot(n_traces, ge, color='red', linewidth=1)
     plt.xlabel("Number of traces")
     plt.ylabel("Guessing entropy")
     plt.title("Guessing entropy vs number of traces")
-    plt.xticks(n_traces)
+    plt.xticks(np.arange(0, trace_cnt+trace_increment_step, trace_increment_step))
     plt.grid(True)
     plt.show()
 
@@ -355,38 +359,66 @@ def main():
     #                     0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     # )
     #================================================================================================
-    # res2500 = [(1000, 81.625), (3500, 50.5), (6000, 19.625), (8500, 8.75),
+    # last round attack
+    # trace_cnt_and_ge_2500 = [(1000, 81.625), (3500, 50.5), (6000, 19.625), (8500, 8.75),
     #         (11000, 2.3125), (13500, 0.3125), (15000, 0)]
 
-    # res500 = [(500, 99.6875), (1000, 81.625), (1500, 76.4375), (2000, 67.875), (2500, 58.625),
+    # trace_cnt_and_ge_500 = [(500, 99.6875), (1000, 81.625), (1500, 76.4375), (2000, 67.875), (2500, 58.625),
     # (3000, 53.5), (3500, 50.5), (4000, 35.9375), (4500, 31.5625), (5000, 22.75), (5500, 18.1875),
     # (6000, 19.625), (6500, 18.6875), (7000, 15.8125), (7500, 14.375), (8000, 7.25), (8500, 8.75),
     # (9000, 6.4375), (9500, 4.0625), (10000, 3.3125), (10500, 3.375), (11000, 2.3125),
     # (11500, 1.1875), (12000, 0.625), (12500, 0.6875), (13000, 0.375), (13500, 0.3125),
     # (14000, 0.25), (14500, 0.0625), (15000, 0.0)]
-    rds_40k = Measurement(
-        plaintext=f'{WORKING_DIR}/test40k/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test40k/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test40k/traces.bin',
+    #================================================================================================
+    # first round attack
+    # trace_cnt_and_ge_500frnd = [(500, 133.9375), (1000, 113.9375), (1500, 153.1875), (2000, 134.25),
+    #  (2500, 139.5), (3000, 143.375), (3500, 155.75), (4000, 149.1875), (4500, 143.1875),
+    #  (5000, 144.3125), (5500, 134.125), (6000, 134.25), (6500, 131.75), (7000, 125.4375), 
+    #  (7500, 119.9375), (8000, 119.625), (8500, 124.625), (9000, 123.625), (9500, 116.625), 
+    #  (10000, 113.25), (10500, 120.25), (11000, 113.1875), (11500, 105.1875), (12000, 103.6875),
+    #  (12500, 90.125), (13000, 97.25), (13500, 100.375), (14000, 97.6875), (14500, 96.3125),
+    #  (15000, 98.9375), (15500, 98.0625), (16000, 102.5625), (16500, 105.125), (17000, 107.8125),
+    #  (17500, 109.9375), (18000, 104.3125), (18500, 97.875), (19000, 98.4375), (19500, 90.9375), 
+    #  (20000, 90.4375), (20500, 86.125), (21000, 86.625), (21500, 87.9375), (22000, 85.8125), 
+    #  (22500, 85.5625), (23000, 85.6875), (23500, 80.1875), (24000, 80.75), (24500, 76.6875), 
+    #  (25000, 75.6875), (25500, 76.25), (26000, 85.25), (26500, 84.875), (27000, 83.8125),
+    #  (27500, 89.5625), (28000, 90.6875), (28500, 95.6875), (29000, 92.875), (29500, 91.3125), 
+    #  (30000, 101.3125), (30500, 101.8125), (31000, 97.0625), (31500, 94.4375), (32000, 98.1875), 
+    #  (32500, 101.4375), (33000, 102.5), (33500, 105.625), (34000, 105.875), (34500, 96.875), 
+    #  (35000, 97.5625), (35500, 97.4375), (36000, 90.3125), (36500, 88.625), (37000, 84.375), 
+    #  (37500, 83.6875), (38000, 80.8125), (38500, 86.0), (39000, 86.3125), (39500, 89.75), 
+    #  (40000, 82.5)]
+    # rds_40k = Measurement(
+    #     plaintext=f'{WORKING_DIR}/test40k/plaintexts.txt',
+    #     ciphertext=f'{WORKING_DIR}/test40k/ciphertexts.txt',
+    #     trace=f'{WORKING_DIR}/test40k/traces.bin',
+    #     encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+    #                     0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
+    # )
+    #================================================================================================
+    #trace_cnt_and_ge_100kfrnd= [(5000, 130.25), (10000, 125.0625), (15000, 118.1875), (20000, 116.0625), (25000, 82.9375), (30000, 99.125), (35000, 104.625), (40000, 99.25), (45000, 95.25), (50000, 95.6875), (55000, 86.9375), (60000, 72.125), (65000, 76.375), (70000, 74.0), (75000, 63.75), (80000, 53.75), (85000, 65.8125), (90000, 67.25), (95000, 68.5), (100000, 78.375)]
+    #trace_cnt_and_ge_150kfrnd[(10000, 125.0625), (20000, 116.0625), (30000, 99.125), (40000, 99.25), (50000, 95.6875), (60000, 72.125), (70000, 74.0), (80000, 53.75), (90000, 67.25), (100000, 78.375), (110000, 66.25), (120000, 66.625), (130000, 62.6875), (140000, 58.0), (150000, 56.0)]
+    rds_150k = Measurement(
+        plaintext=f'{WORKING_DIR}/test150k_pt02_01/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test150k_pt02_01/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test150k_pt02_01/traces.bin',
         encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
                         0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
     
     trace_cnt_and_ge = []
-    trace_increment_step = 500
-    measurement = rds_40k
-    trace_cnt = 40000
+    trace_increment_step = 10000
+    measurement = rds_150k
+    trace_cnt = 150000
     attack_mode = "frnd"
 
     for i in range(trace_increment_step, trace_cnt+trace_increment_step, trace_increment_step):
         _, ge = cpa(measurement, n_traces=i, timer=True, attack_mode=attack_mode)
         trace_cnt_and_ge.append( (i, ge) )
+        print(trace_cnt_and_ge)
     
     print("Array of results with n_traces and guessing entropy:")
-    print(trace_cnt_and_ge)
-    
-
-    plot_ge_vs_ntraces(trace_cnt_and_ge)
+    plot_ge_vs_ntraces(trace_cnt_and_ge, trace_cnt, trace_increment_step)
 
 if __name__ == "__main__":
     main()
