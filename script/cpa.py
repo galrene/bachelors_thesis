@@ -220,7 +220,7 @@ def find_key(measurement: Measurement, key_length_in_bytes, n_traces: int = 0,
                 n_traces = measurement.cnt
             hamm_mtx = build_hamm_distance_mtx(ct_mtx, n_traces, i)
         elif attack_mode == "frnd":
-            hamm_mtx = build_hamming_weight_mtx(build_hypothesis(measurement, i))
+            hamm_mtx = build_hamming_weight_mtx(build_hypothesis(measurement, i, n_traces))
 
         correlation_matrix = correlate(hamm_mtx, standardized_traces)
         key_byte, tracesample_with_max_corr = find_max(correlation_matrix)
@@ -372,25 +372,21 @@ def main():
                         0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
     
-    # res = []
-    # step = 500
-    # stop = 15000
-    # for i in range(step, stop+step, step):
-    #     _, ge = cpa(rds_40k, n_traces=i, timer=True, attack_mode="lrnd")
-    #     res.append( (i, ge) )
+    trace_cnt_and_ge = []
+    trace_increment_step = 500
+    measurement = rds_40k
+    trace_cnt = 40000
+    attack_mode = "frnd"
+
+    for i in range(trace_increment_step, trace_cnt+trace_increment_step, trace_increment_step):
+        _, ge = cpa(measurement, n_traces=i, timer=True, attack_mode=attack_mode)
+        trace_cnt_and_ge.append( (i, ge) )
     
-    # print("Array of results with n_traces and guessing entropy:")
-    # print(res)
-    
-    cpa(rds_40k, n_traces=15000, timer=True, attack_mode="lrnd")
-    cpa(rds_40k, timer=True, attack_mode="frnd")
-    cpa(known_key_measurement, timer=True, attack_mode="frnd")
-    cpa(unknown_key_measurement, timer=True, attack_mode="frnd")
-    
-    
+    print("Array of results with n_traces and guessing entropy:")
+    print(trace_cnt_and_ge)
     
 
-    # plot_ge_vs_ntraces(res)
+    plot_ge_vs_ntraces(trace_cnt_and_ge)
 
 if __name__ == "__main__":
     main()
