@@ -21,6 +21,7 @@ class Measurement:
         if not os.path.isfile(trace):
             raise FileNotFoundError(f"The file '{trace}' was not found.")
         if encryption_key is None:
+            # Guessing entropy will not be calculated in the cpa.py script
             print(f"Warning: encryption key not provided for {trace}.")
         self.plaintext_path = plaintext
         self.ciphertext_path = ciphertext
