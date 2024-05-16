@@ -53,7 +53,7 @@ SBoxInverse = np.array(
             ,0x17 ,0x2B ,0x04 ,0x7E ,0xBA ,0x77 ,0xD6 ,0x26 ,0xE1 ,0x69 ,0x14 ,0x63 ,0x55 ,0x21 ,0x0C ,0x7D],
             dtype=np.uint8)
 
-def build_hypothesis(measurement: Measurement, byte_idx: int) -> np.ndarray:
+def build_hypothesis(measurement: Measurement, byte_idx: int, n_traces: int = 0) -> np.ndarray:
     """
     Build a hypothesis matrix for a single byte of the key by reversing the last round of AES and
     comparing the rounds with the previous one.
@@ -63,7 +63,8 @@ def build_hypothesis(measurement: Measurement, byte_idx: int) -> np.ndarray:
     """
     # Load plaintext column
     pt_col = np.loadtxt(measurement.plaintext_path, usecols=byte_idx, converters=hex_to_int, dtype=np.uint8)
-    
+    if n_traces != 0:
+        pt_col = pt_col[:n_traces]
     # Generate hypothesis matrix
     key_guess = np.arange(256, dtype=np.uint8)
     pt_xor = pt_col[:, np.newaxis] ^ key_guess
@@ -151,7 +152,7 @@ def build_traces_mtx(measurement: Measurement) -> np.ndarray:
     # traces_matrix = traces_matrix[:, 64:110]
     standardized_traces = ((traces_matrix - np.mean(traces_matrix, axis=0)) # standardize traces to save time
                            / np.std(traces_matrix, axis=0))
-    print(f"Traces mtx shape: {standardized_traces.shape}")
+    print(f"Full traces mtx shape: {standardized_traces.shape}")
     return standardized_traces
 
 def find_idx_in_arr ( arr, key ):
@@ -184,10 +185,10 @@ def guessing_entropy(correlation_matrix, processed_byte_idx, correct_key):
         return place_of_correct_key
         
 
-def find_key(measurement: Measurement, key_length_in_bytes, attack_mode: str = "lrnd",
-              timer: bool = False ) -> Tuple[np.ndarray, str]:
+def find_key(measurement: Measurement, key_length_in_bytes, n_traces: int = 0,
+              attack_mode: str = "lrnd", timer: bool = False ) -> Tuple[np.ndarray, str, int]:
     """
-    Return the key based on the maximum correlation for each byte of the key.
+    Return the key and its guessing entropy based on the maximum correlation for each byte of the key.
     """
     if attack_mode not in [ "lrnd", "frnd" ]:
         raise ValueError("Unknown attack mode.")
@@ -195,13 +196,16 @@ def find_key(measurement: Measurement, key_length_in_bytes, attack_mode: str = "
     if timer == True: start_time = time()
 
     standardized_traces = build_traces_mtx(measurement)
+    if n_traces != 0:
+        standardized_traces = standardized_traces[:n_traces, :]
     key_arr = np.zeros(key_length_in_bytes, dtype=np.uint8)
 
     searched_key = measurement.encryption_key
     if attack_mode == "lrnd":
-        # ct_mtx.shape == [ n_traces, 16 ]
         ct_mtx = np.loadtxt(measurement.ciphertext_path,
                             converters=hex_to_int, dtype=np.uint8)
+        if n_traces != 0:
+            ct_mtx = ct_mtx[:n_traces, :]
         # TODO: convert this to np.array
         #searched_key = [print(keybyte) for keybyte in key_schedule(bytes(measurement.encryption_key))]
         searched_key = np.array([0xe0, 0x7f, 0x16, 0xbd, 0xb9, 0xe5, 0x03, 0x46, 0xa2, 0x27, 0x7c, 0xd3, 0x82, 0x77, 0x42, 0x70],dtype=np.uint8)
@@ -215,7 +219,9 @@ def find_key(measurement: Measurement, key_length_in_bytes, attack_mode: str = "
 
     for i in range(key_length_in_bytes):
         if attack_mode == "lrnd":
-            hamm_mtx = build_hamm_distance_mtx(ct_mtx, measurement.cnt, i)
+            if n_traces == 0:
+                n_traces = measurement.cnt
+            hamm_mtx = build_hamm_distance_mtx(ct_mtx, n_traces, i)
         elif attack_mode == "frnd":
             hamm_mtx = build_hamming_weight_mtx(build_hypothesis(measurement, i))
 
@@ -230,11 +236,11 @@ def find_key(measurement: Measurement, key_length_in_bytes, attack_mode: str = "
     if timer == True:
         end_time = time()
         print(f"CPA took: {end_time - start_time:0.0f} seconds")
-    
-    print(f"Guessing entropy: {np.mean(correct_key_places):.2f}")
+    GE = np.mean(correct_key_places)
+    print(f"Guessing entropy: {GE:.2f}")
     
     key_hex_str = ' '.join([hex(i)[2:].zfill(2).upper() for i in key_arr])
-    return key_arr, key_hex_str
+    return key_arr, key_hex_str, GE
 
 def verify_key ( measurement: Measurement, key: np.ndarray ) -> bool:
     key_bytes = bytes(key)
@@ -269,20 +275,23 @@ def enc_key_from_last_round_key ( key_arr: np.array ) -> np.array:
     encryption_key = reverse_key_schedule(bytes(key_arr), 10)
     return np.frombuffer(encryption_key, dtype=np.uint8)
 
-def cpa(measurement: Measurement, attack_mode: str = "lrnd", timer: bool = False) -> bool:
+def cpa(measurement: Measurement, n_traces: int = 0, attack_mode: str = "lrnd", timer: bool = False) -> bool:
     """
     Perform correlation power analysis on given measurement.
     :param Measurement measurement: Traces, PTs, CTs
     :param str attack_mode: lrnd for last round attack, frnd for first round attack
     """
+    if n_traces == 0:
+        n_traces = measurement.cnt
+
     match attack_mode:
         case "lrnd":
-            print(f"\nPerforming last round CPA using {measurement.cnt} measurements.")
-            key_arr, key_hex = find_key(measurement, measurement.key_length, timer=True, attack_mode="lrnd")
+            print(f"\nPerforming last round CPA using {n_traces} measurements.")
+            key_arr, key_hex, ge = find_key(measurement, measurement.key_length, n_traces=n_traces, timer=True, attack_mode="lrnd")
             key_arr = enc_key_from_last_round_key(key_arr)
         case "frnd":
-            print(f"\nPerforming first round CPA using {measurement.cnt} measurements.")
-            key_arr, key_hex = find_key(measurement, measurement.key_length, timer=True, attack_mode="frnd")
+            print(f"\nPerforming first round CPA using {n_traces} measurements.")
+            key_arr, key_hex, ge = find_key(measurement, measurement.key_length, n_traces=n_traces, timer=True, attack_mode="frnd")
         case _:
             raise ValueError("Unknown attack mode.")
 
@@ -293,7 +302,18 @@ def cpa(measurement: Measurement, attack_mode: str = "lrnd", timer: bool = False
     print(f"Attack success: { Fore.GREEN + str(success) if success == True else Fore.RED + str(success) }")
     print(Style.RESET_ALL, end='')
     
-    return success
+    return success, ge
+
+def plot_ge_vs_ntraces ( results: List[Tuple[int, float]] ):
+    import matplotlib.pyplot as plt
+    n_traces, ge = zip(*results)
+    plt.plot(n_traces, ge, color='red', linewidth=1)
+    plt.xlabel("Number of traces")
+    plt.ylabel("Guessing entropy")
+    plt.title("Guessing entropy vs number of traces")
+    plt.xticks(n_traces)
+    plt.grid(True)
+    plt.show()
 
 
 def main():
@@ -328,15 +348,33 @@ def main():
     #                     0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     # )
     rds_40k = Measurement(
-        plaintext=f'{WORKING_DIR}/test_40k/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test_40k/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test_40k/traces.bin',
+        plaintext=f'{WORKING_DIR}/test40k/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test40k/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test40k/traces.bin',
         encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
                         0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
     
-    cpa(rds_40k, timer=True, attack_mode="lrnd")
-    # cpa(rds_20k, timer=True, attack_mode="lrnd")
+    res = []
+    step = 500
+    stop = 15000
+    for i in range(step, stop+step, step):
+        _, ge = cpa(rds_40k, n_traces=i, timer=True, attack_mode="lrnd")
+        res.append( (i, ge) )
+    
+    print("Array of results with n_traces and guessing entropy:")
+    print(res)
+    # res2500 = [(1000, 81.625), (3500, 50.5), (6000, 19.625), (8500, 8.75),
+    #         (11000, 2.3125), (13500, 0.3125), (15000, 0)]
+
+    # res500 = [(500, 99.6875), (1000, 81.625), (1500, 76.4375), (2000, 67.875), (2500, 58.625),
+    # (3000, 53.5), (3500, 50.5), (4000, 35.9375), (4500, 31.5625), (5000, 22.75), (5500, 18.1875),
+    # (6000, 19.625), (6500, 18.6875), (7000, 15.8125), (7500, 14.375), (8000, 7.25), (8500, 8.75),
+    # (9000, 6.4375), (9500, 4.0625), (10000, 3.3125), (10500, 3.375), (11000, 2.3125),
+    # (11500, 1.1875), (12000, 0.625), (12500, 0.6875), (13000, 0.375), (13500, 0.3125),
+    # (14000, 0.25), (14500, 0.0625), (15000, 0.0)]
+
+    plot_ge_vs_ntraces(res)
 
 if __name__ == "__main__":
     main()
