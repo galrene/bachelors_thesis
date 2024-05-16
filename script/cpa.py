@@ -206,16 +206,13 @@ def find_key(measurement: Measurement, key_length_in_bytes, n_traces: int = 0,
                             converters=hex_to_int, dtype=np.uint8)
         if n_traces != 0:
             ct_mtx = ct_mtx[:n_traces, :]
-        # TODO: convert this to np.array
-        #searched_key = [print(keybyte) for keybyte in key_schedule(bytes(measurement.encryption_key))]
-        searched_key = np.array([0xe0, 0x7f, 0x16, 0xbd, 0xb9, 0xe5, 0x03, 0x46, 0xa2, 0x27, 0x7c, 0xd3, 0x82, 0x77, 0x42, 0x70],dtype=np.uint8)
-        #print(searched_key)
         
-        
+        byte_array = key_schedule(bytes(measurement.encryption_key))[10]
+        int_list = [int(byte) for byte in byte_array]
+        searched_key = np.array(int_list, dtype=np.uint8)                
 
-    # place of correct key within a sorted array of max correlations
-    # for each key guess for given byte. used for guessing entropy calculation
-    correct_key_places = []
+    # guessing entropies of each subkey byte
+    byte_guessing_entropies = []
 
     for i in range(key_length_in_bytes):
         if attack_mode == "lrnd":
@@ -228,7 +225,9 @@ def find_key(measurement: Measurement, key_length_in_bytes, n_traces: int = 0,
         correlation_matrix = correlate(hamm_mtx, standardized_traces)
         key_byte, tracesample_with_max_corr = find_max(correlation_matrix)
         
-        correct_key_places.append(guessing_entropy(correlation_matrix, i, searched_key))
+        # If the real encryption key is known, calculate the guessing entropy
+        if measurement.encryption_key is not None:
+            byte_guessing_entropies.append(guessing_entropy(correlation_matrix, i, searched_key))
         
         print(f"key[{i}]: 0x{key_byte:02X}, sample: {tracesample_with_max_corr}")
         key_arr[i] = key_byte
@@ -236,8 +235,12 @@ def find_key(measurement: Measurement, key_length_in_bytes, n_traces: int = 0,
     if timer == True:
         end_time = time()
         print(f"CPA took: {end_time - start_time:0.0f} seconds")
-    GE = np.mean(correct_key_places)
-    print(f"Guessing entropy: {GE:.2f}")
+    
+    # If the real encryption key is known, calculate the guessing entropy
+    GE = None
+    if measurement.encryption_key is not None:
+        GE = np.mean(byte_guessing_entropies)
+        print(f"Guessing entropy: {GE:.2f}")
     
     key_hex_str = ' '.join([hex(i)[2:].zfill(2).upper() for i in key_arr])
     return key_arr, key_hex_str, GE
@@ -260,8 +263,12 @@ def red_bg ( text: str ) -> str:
 def green_bg ( text: str ) -> str:
     return Fore.GREEN + Style.BRIGHT + text + Style.RESET_ALL
 
-def print_key ( found_key: np.ndarray, real_key: np.ndarray ) -> bool:
+def print_key ( found_key: np.ndarray, real_key: np.ndarray = None ) -> bool:
     print("Found key: ", end='')
+    # if real_key is not provided, print only the found key
+    if real_key is None:
+        print(' '.join([f"0x{byte:02X}" for byte in found_key]))
+        return
     for byte in range(len(found_key)):
         keybyte_formatted = f"0x{found_key[byte]:02X}"
         print(
@@ -319,19 +326,19 @@ def plot_ge_vs_ntraces ( results: List[Tuple[int, float]] ):
 def main():
     WORKING_DIR = "../traces"
 
-    # # known_key_measurement = Measurement(
-    # #     plaintext=f'{WORKING_DIR}/cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
-    # #     ciphertext=f'{WORKING_DIR}/cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
-    # #     trace=f'{WORKING_DIR}/cpa_srcs/traces-00112233445566778899aabbccddeeff.bin',
-    # #     encryption_key=[0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 
-    # #                     0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
-    # # )
+    known_key_measurement = Measurement(
+        plaintext=f'{WORKING_DIR}/cpa_srcs/plaintext-00112233445566778899aabbccddeeff.txt',
+        ciphertext=f'{WORKING_DIR}/cpa_srcs/ciphertext-00112233445566778899aabbccddeeff.txt',
+        trace=f'{WORKING_DIR}/cpa_srcs/traces-00112233445566778899aabbccddeeff.bin',
+        encryption_key=[0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 
+                        0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
+    )
 
-    # # unknown_key_measurement = Measurement(
-    # #     plaintext=f'{WORKING_DIR}/cpa_srcs/plaintext-unknown_key.txt',
-    # #     ciphertext=f'{WORKING_DIR}/cpa_srcs/ciphertext-unknown_key.txt',
-    # #     trace=f'{WORKING_DIR}/cpa_srcs/traces-unknown_key.bin'
-    # # )
+    unknown_key_measurement = Measurement(
+        plaintext=f'{WORKING_DIR}/cpa_srcs/plaintext-unknown_key.txt',
+        ciphertext=f'{WORKING_DIR}/cpa_srcs/ciphertext-unknown_key.txt',
+        trace=f'{WORKING_DIR}/cpa_srcs/traces-unknown_key.bin'
+    )
 
     # rds_70k = Measurement(
     #     plaintext=f'{WORKING_DIR}/test70k_128w/plaintexts.txt',
@@ -347,23 +354,7 @@ def main():
     #     encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
     #                     0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     # )
-    rds_40k = Measurement(
-        plaintext=f'{WORKING_DIR}/test40k/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test40k/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test40k/traces.bin',
-        encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    )
-    
-    res = []
-    step = 500
-    stop = 15000
-    for i in range(step, stop+step, step):
-        _, ge = cpa(rds_40k, n_traces=i, timer=True, attack_mode="lrnd")
-        res.append( (i, ge) )
-    
-    print("Array of results with n_traces and guessing entropy:")
-    print(res)
+    #================================================================================================
     # res2500 = [(1000, 81.625), (3500, 50.5), (6000, 19.625), (8500, 8.75),
     #         (11000, 2.3125), (13500, 0.3125), (15000, 0)]
 
@@ -373,8 +364,33 @@ def main():
     # (9000, 6.4375), (9500, 4.0625), (10000, 3.3125), (10500, 3.375), (11000, 2.3125),
     # (11500, 1.1875), (12000, 0.625), (12500, 0.6875), (13000, 0.375), (13500, 0.3125),
     # (14000, 0.25), (14500, 0.0625), (15000, 0.0)]
+    rds_40k = Measurement(
+        plaintext=f'{WORKING_DIR}/test40k/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test40k/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test40k/traces.bin',
+        encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
+                        0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
+    )
+    
+    # res = []
+    # step = 500
+    # stop = 15000
+    # for i in range(step, stop+step, step):
+    #     _, ge = cpa(rds_40k, n_traces=i, timer=True, attack_mode="lrnd")
+    #     res.append( (i, ge) )
+    
+    # print("Array of results with n_traces and guessing entropy:")
+    # print(res)
+    
+    cpa(rds_40k, n_traces=15000, timer=True, attack_mode="lrnd")
+    cpa(rds_40k, timer=True, attack_mode="frnd")
+    cpa(known_key_measurement, timer=True, attack_mode="frnd")
+    cpa(unknown_key_measurement, timer=True, attack_mode="frnd")
+    
+    
+    
 
-    plot_ge_vs_ntraces(res)
+    # plot_ge_vs_ntraces(res)
 
 if __name__ == "__main__":
     main()
