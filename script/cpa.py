@@ -33,7 +33,7 @@ SBox = np.array([
     ], dtype='uint8')
 
 
-ShiftRowIndex = np.array([ 0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11 ], dtype=np.uint8)
+ShiftRowInverse = np.array([ 0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11 ], dtype=np.uint8)
 SBoxInverse = np.array(
             [0x52 ,0x09 ,0x6A ,0xD5 ,0x30 ,0x36 ,0xA5 ,0x38 ,0xBF ,0x40 ,0xA3 ,0x9E ,0x81 ,0xF3 ,0xD7 ,0xFB
             ,0x7C ,0xE3 ,0x39 ,0x82 ,0x9B ,0x2F ,0xFF ,0x87 ,0x34 ,0x8E ,0x43 ,0x44 ,0xC4 ,0xDE ,0xE9 ,0xCB
@@ -86,27 +86,18 @@ def hamm_weight(hex_num : int) -> int:
     """ Calculate the hamming weight of a number """
     return bin(hex_num).count("1")
 
-def hamm_distance(cipher_text_row: np.array, byte_idx: int, keyguess: int):
-    """
-    Calculate the hamming distance between the AES state register after 9th and after 10th round.
-    :param cipher_text_row: 
-    :param byte_index: Currently processed byte index within the ciphertext row.
-    :param keyguess: Currently guessed key for the given processed byte.
-    """
-    byte_idx_shifted = ShiftRowIndex[byte_idx]
-    state10 = cipher_text_row[byte_idx_shifted]
-    
-    AddRoundKeyByte = keyguess ^ cipher_text_row[byte_idx]
-    state9 = SBoxInverse[ AddRoundKeyByte ]
-    
+def hamm_distance(ciphertext_row: np.array, byte_idx: int, keyguess: int):
+    byte_idx_shifted = ShiftRowInverse[byte_idx]
+    state10 = ciphertext_row[byte_idx_shifted]
+
+    AddRoundKeyByte = keyguess ^ ciphertext_row[byte_idx]
+    state9 = SBoxInverse[AddRoundKeyByte]
     # hamming_weight of xorred values is their hamming distance
-    return hamm_weight ( state9 ^ state10 )
+    return hamm_weight(state9 ^ state10)
 
 def build_hamm_distance_mtx(ct, n_traces: int, byte_idx: int):
     """
-    Kedze budem prehadzovat byty v riadkoch, musim priebezne nacitavat cely riadok ciphertextu,
-    kedzto pri utoku na prvy byte mi stacilo prvy element v riadku a teda som to mohol robit rovno
-    po stlpcoch.
+    Since bytes will be rearranged within rows, the entire row of ciphertext must be read
     """
     mtx = np.zeros((n_traces, 256))
     # ct_row = ct[trace, :] 
@@ -145,7 +136,6 @@ def find_max(correlation_matrix: np.ndarray):
 
 
 def build_traces_mtx(measurement: Measurement) -> np.ndarray:
-    # numpy matrix of traces from a binary file
     traces_matrix = (np.fromfile(measurement.trace_path, dtype=np.uint8). # load traces
                      reshape(-1, measurement.trace_length))
     # slice traces matrix to the relevant part
@@ -162,13 +152,10 @@ def find_idx_in_arr ( arr, key ):
 
 def guessing_entropy(correlation_matrix, processed_byte_idx, correct_key):
         """
-        V korelacnej matici v kazdom riadku (kazdom z odhadov kluca) najdem maximum a index
-        riadku na ktorom sa dane maximum nachadza (odhad kluca).
-        Tieto maximalne korelacie zoradim zostupne a zistim, kolkaty v poradi je realny kluc, co
-        sa tyka vypocitanej korelacie.
-
-        Riadok korelacnej matice je odhad kluca, index maximalnej hodnoty v riadku (index
-        stlpca v matici) je moment (cislo traceu) v ktorom sa vyskytla najvyssia korelacia.
+        In each row of the correlation matrix (each of the key estimates), the maximum
+        and the index of the row where the maximum is located (key estimate) are found.
+        These maximum correlations are sorted in descending order, and it is determined
+        which one in the sequence is the real key, in terms of the computed correlation.
         """
         # array containing key guess and its correlation
         key_corr_arr = []
@@ -343,74 +330,22 @@ def main():
         ciphertext=f'{WORKING_DIR}/cpa_srcs/ciphertext-unknown_key.txt',
         trace=f'{WORKING_DIR}/cpa_srcs/traces-unknown_key.bin'
     )
-
-    # rds_70k = Measurement(
-    #     plaintext=f'{WORKING_DIR}/test70k_128w/plaintexts.txt',
-    #     ciphertext=f'{WORKING_DIR}/test70k_128w/ciphertexts.txt',
-    #     trace=f'{WORKING_DIR}/test70k_128w/traces.bin',
-    #     encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-    #                     0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    # )
-    # rds_20k = Measurement(
-    #     plaintext=f'{WORKING_DIR}/test20k_from40k/plaintexts.txt',
-    #     ciphertext=f'{WORKING_DIR}/test20k_from40k/ciphertexts.txt',
-    #     trace=f'{WORKING_DIR}/test20k_from40k/traces.bin',
-    #     encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-    #                     0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    # )
-    #================================================================================================
-    # last round attack
-    # trace_cnt_and_ge_2500 = [(1000, 81.625), (3500, 50.5), (6000, 19.625), (8500, 8.75),
-    #         (11000, 2.3125), (13500, 0.3125), (15000, 0)]
-
-    # trace_cnt_and_ge_500 = [(500, 99.6875), (1000, 81.625), (1500, 76.4375), (2000, 67.875), (2500, 58.625),
-    # (3000, 53.5), (3500, 50.5), (4000, 35.9375), (4500, 31.5625), (5000, 22.75), (5500, 18.1875),
-    # (6000, 19.625), (6500, 18.6875), (7000, 15.8125), (7500, 14.375), (8000, 7.25), (8500, 8.75),
-    # (9000, 6.4375), (9500, 4.0625), (10000, 3.3125), (10500, 3.375), (11000, 2.3125),
-    # (11500, 1.1875), (12000, 0.625), (12500, 0.6875), (13000, 0.375), (13500, 0.3125),
-    # (14000, 0.25), (14500, 0.0625), (15000, 0.0)]
-    #================================================================================================
-    # first round attack
-    # trace_cnt_and_ge_500frnd = [(500, 133.9375), (1000, 113.9375), (1500, 153.1875), (2000, 134.25),
-    #  (2500, 139.5), (3000, 143.375), (3500, 155.75), (4000, 149.1875), (4500, 143.1875),
-    #  (5000, 144.3125), (5500, 134.125), (6000, 134.25), (6500, 131.75), (7000, 125.4375), 
-    #  (7500, 119.9375), (8000, 119.625), (8500, 124.625), (9000, 123.625), (9500, 116.625), 
-    #  (10000, 113.25), (10500, 120.25), (11000, 113.1875), (11500, 105.1875), (12000, 103.6875),
-    #  (12500, 90.125), (13000, 97.25), (13500, 100.375), (14000, 97.6875), (14500, 96.3125),
-    #  (15000, 98.9375), (15500, 98.0625), (16000, 102.5625), (16500, 105.125), (17000, 107.8125),
-    #  (17500, 109.9375), (18000, 104.3125), (18500, 97.875), (19000, 98.4375), (19500, 90.9375), 
-    #  (20000, 90.4375), (20500, 86.125), (21000, 86.625), (21500, 87.9375), (22000, 85.8125), 
-    #  (22500, 85.5625), (23000, 85.6875), (23500, 80.1875), (24000, 80.75), (24500, 76.6875), 
-    #  (25000, 75.6875), (25500, 76.25), (26000, 85.25), (26500, 84.875), (27000, 83.8125),
-    #  (27500, 89.5625), (28000, 90.6875), (28500, 95.6875), (29000, 92.875), (29500, 91.3125), 
-    #  (30000, 101.3125), (30500, 101.8125), (31000, 97.0625), (31500, 94.4375), (32000, 98.1875), 
-    #  (32500, 101.4375), (33000, 102.5), (33500, 105.625), (34000, 105.875), (34500, 96.875), 
-    #  (35000, 97.5625), (35500, 97.4375), (36000, 90.3125), (36500, 88.625), (37000, 84.375), 
-    #  (37500, 83.6875), (38000, 80.8125), (38500, 86.0), (39000, 86.3125), (39500, 89.75), 
-    #  (40000, 82.5)]
-    # rds_40k = Measurement(
-    #     plaintext=f'{WORKING_DIR}/test40k/plaintexts.txt',
-    #     ciphertext=f'{WORKING_DIR}/test40k/ciphertexts.txt',
-    #     trace=f'{WORKING_DIR}/test40k/traces.bin',
-    #     encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
-    #                     0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
-    # )
-    #================================================================================================
-    #trace_cnt_and_ge_100kfrnd= [(5000, 130.25), (10000, 125.0625), (15000, 118.1875), (20000, 116.0625), (25000, 82.9375), (30000, 99.125), (35000, 104.625), (40000, 99.25), (45000, 95.25), (50000, 95.6875), (55000, 86.9375), (60000, 72.125), (65000, 76.375), (70000, 74.0), (75000, 63.75), (80000, 53.75), (85000, 65.8125), (90000, 67.25), (95000, 68.5), (100000, 78.375)]
-    #trace_cnt_and_ge_150kfrnd[(10000, 125.0625), (20000, 116.0625), (30000, 99.125), (40000, 99.25), (50000, 95.6875), (60000, 72.125), (70000, 74.0), (80000, 53.75), (90000, 67.25), (100000, 78.375), (110000, 66.25), (120000, 66.625), (130000, 62.6875), (140000, 58.0), (150000, 56.0)]
-    rds_150k = Measurement(
-        plaintext=f'{WORKING_DIR}/test150k_pt02_01/plaintexts.txt',
-        ciphertext=f'{WORKING_DIR}/test150k_pt02_01/ciphertexts.txt',
-        trace=f'{WORKING_DIR}/test150k_pt02_01/traces.bin',
+    rds_40k = Measurement(
+        plaintext=f'{WORKING_DIR}/test40k/plaintexts.txt',
+        ciphertext=f'{WORKING_DIR}/test40k/ciphertexts.txt',
+        trace=f'{WORKING_DIR}/test40k/traces.bin',
         encryption_key=[0x7D, 0x26, 0x6a, 0xec, 0xb1, 0x53, 0xb4,
                         0xd5, 0xd6, 0xb1, 0x71, 0xa5, 0x81, 0x36, 0x60, 0x5b]
     )
     
+    cpa(unknown_key_measurement, timer=True, attack_mode="frnd")
+    cpa(known_key_measurement, timer=True, attack_mode="frnd")
+    
     trace_cnt_and_ge = []
-    trace_increment_step = 10000
-    measurement = rds_150k
-    trace_cnt = 150000
-    attack_mode = "frnd"
+    trace_increment_step = 500
+    measurement = rds_40k
+    trace_cnt = 20000
+    attack_mode = "lrnd"
 
     for i in range(trace_increment_step, trace_cnt+trace_increment_step, trace_increment_step):
         _, ge = cpa(measurement, n_traces=i, timer=True, attack_mode=attack_mode)
